@@ -49,8 +49,8 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = True
-env_enable = True
+gui_enable = False
+env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
@@ -96,17 +96,7 @@ def pub_run():
     pass
 
 def base_pose_CB(data):
-    # quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
-    # _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2]
-    # _q['x'] = data.pose.pose.position.x
-    # _q['y'] = data.pose.pose.position.y
-    pass
-
-    
-def base_twist_CB(data):
     if _global_flag['initial_data']==True:
-        _q['v'] = data.twist.twist.linear.x
-        _q['w'] = data.twist.twist.angular.z
 
         # compensate odom offset
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
@@ -122,6 +112,12 @@ def base_twist_CB(data):
         _q['y0'] = data.pose.pose.position.y
         _global_flag['initial_data']=True
 
+    
+def base_twist_CB(data):
+    _q['v'] = data.twist.twist.linear.x
+    _q['w'] = data.twist.twist.angular.z
+
+
 def cmd_run():
 
     rospy.init_node('cona_mpc', anonymous=True)
@@ -131,7 +127,7 @@ def cmd_run():
     else:
         pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=10)
 
-    # rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
+    rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
     rospy.Subscriber("/odom", Odometry, base_twist_CB)
 
     base_msg = Twist()
@@ -177,7 +173,7 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = vd_itp_new.pop(0)
+            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
@@ -560,6 +556,7 @@ def mpc_run():
             robotID, "velocity", joint_indices, targetVelocities=twist_d
         )
         print("v: ", vd_control_sig, ", w: ", wd_control_sig)
+        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         # Simulate
         obj.run_simulation(no_samples)
         end=time.time()
@@ -569,7 +566,7 @@ def mpc_run():
         #     break
 
         cnt+=1
-        print("comp time = %f[ms]"%(1000*(time.time()-start)))
+        
         while time.time()-init_time<t_mpc:
                 time.sleep(1/100000000)
                 glob_time_buf=time.time()

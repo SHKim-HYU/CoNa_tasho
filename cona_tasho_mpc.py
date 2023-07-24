@@ -50,8 +50,8 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = True
-env_enable = True
+gui_enable = False
+env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
@@ -176,7 +176,7 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = vd_itp_new.pop(0)
+            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
@@ -544,6 +544,7 @@ def mpc_run():
             robotID, "velocity", joint_indices, targetVelocities=twist_d
         )
         print("v: ", vd_control_sig, ", w: ", wd_control_sig)
+        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         # Simulate
         obj.run_simulation(no_samples)
         end=time.time()
@@ -553,7 +554,7 @@ def mpc_run():
             break
 
         cnt+=1
-        print("comp time = %f[ms]"%(1000*(time.time()-start)))
+        
         while time.time()-init_time<t_mpc:
                 time.sleep(1/100000000)
                 glob_time_buf=time.time()
