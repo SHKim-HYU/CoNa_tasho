@@ -78,23 +78,6 @@ _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
 _q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
-_qd['xd_itp']=[[0.0]*horizon_samples]
-_qd['yd_itp']=[[0.0]*horizon_samples]
-_qd['thd_itp']=[[0.0]*horizon_samples]
-_qd['xd_itp']=[[0.0]*horizon_samples]
-_qd['yd_itp']=[[0.0]*horizon_samples]
-
-_global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False; _global_flag['OCP_Solved_mobile'] = False; _global_flag['Interpolated_mobile'] = False;
-_global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; _global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
-
-_task_flag['Task_Transition'] = False;
-_task_flag['Task_Robot'] = 0
-
-
-_q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
-_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
-_qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
-
 _qd['xd_itp']=[0.0]*horizon_samples
 _qd['yd_itp']=[0.0]*horizon_samples
 _qd['thd_itp']=[0.0]*horizon_samples
@@ -225,8 +208,8 @@ def mpc_run():
     # Update robot's parameters if needed
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
-    max_task_acc = cs.DM([3, 3*pi])
-    max_task_jerk = cs.DM([20,20*pi])
+    max_task_acc = cs.DM([1, 1*pi])
+    max_task_jerk = cs.DM([10,10*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
     robot.set_task_jerk_limits(lb=-max_task_jerk, ub=max_task_jerk)
@@ -266,16 +249,16 @@ def mpc_run():
     tc.add_regularization(expression = dv_0, weight = 1e0, stage = 0)
     tc.add_regularization(expression = dw_0, weight = 1e0, stage = 0)
 
-    tc.add_regularization(expression = ddv_0, weight = 1e-1, stage = 0)
-    tc.add_regularization(expression = ddw_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = ddv_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = ddw_0, weight = 1e0, stage = 0)
 
     # Path_constraint
-    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e1, 'norm':'L2'}
-    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':2e1, 'norm':'L2'}
-    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':2e1, 'norm':'L2'}
+    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
+    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
+    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"path_constraints":[path_pos1, path_pos2, path_pos3]}, stage = 0)
 
-    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':2e1, 'norm':'L2'}
+    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"final_constraints":[final_pos]}, stage = 0)
 
     ################################################
@@ -416,7 +399,7 @@ def mpc_run():
 
     # Create world simulator based on pybullet
     obj = WorldSimulator.WorldSimulator(bullet_gui=gui_enable)
-    obj.visualization_realtime=True
+    obj.visualization_realtime=False
     # Add robot to the world environment
     position = [0.0, 0.0, 0.0]
     orientation = [0.0, 0.0, 0.0, 1.0]
