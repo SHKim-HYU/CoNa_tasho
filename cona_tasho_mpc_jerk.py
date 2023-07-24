@@ -368,7 +368,7 @@ def mpc_run():
     ################################################
     # Set solver and discretization options
     ################################################
-    sol_options = {"ipopt": {"print_level": 0}}
+    sol_options = {"ipopt": {"linear_solver": "ma27","print_level": 0}}
     tc.set_ocp_solver('ipopt', sol_options)
     mpc_options = default_mpc_options.get_default_mpc_options()
     # tc.set_ocp_solver(mpc_options['ipopt_lbfgs_hsl']['solver_name'], mpc_options['ipopt_lbfgs_hsl']['options'])
