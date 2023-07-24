@@ -33,92 +33,118 @@
         "start": 255,
         "size": 1,
         "jump": 1,
-        "end": 305
+        "end": 306
     },
     "dw0": {
-        "start": 305,
-        "size": 1,
-        "jump": 1,
-        "end": 355
-    },
-    "x00": {
-        "start": 355,
-        "size": 1,
-        "jump": 1,
-        "end": 356
-    },
-    "y00": {
-        "start": 356,
+        "start": 306,
         "size": 1,
         "jump": 1,
         "end": 357
     },
-    "th00": {
+    "ddv0": {
         "start": 357,
         "size": 1,
         "jump": 1,
-        "end": 358
+        "end": 407
+    },
+    "ddw0": {
+        "start": 407,
+        "size": 1,
+        "jump": 1,
+        "end": 457
+    },
+    "x00": {
+        "start": 457,
+        "size": 1,
+        "jump": 1,
+        "end": 458
+    },
+    "y00": {
+        "start": 458,
+        "size": 1,
+        "jump": 1,
+        "end": 459
+    },
+    "th00": {
+        "start": 459,
+        "size": 1,
+        "jump": 1,
+        "end": 460
     },
     "v00": {
-        "start": 358,
+        "start": 460,
         "size": 1,
         "jump": 1,
-        "end": 359
+        "end": 461
     },
     "w00": {
-        "start": 359,
+        "start": 461,
         "size": 1,
         "jump": 1,
-        "end": 360
+        "end": 462
+    },
+    "dv00": {
+        "start": 462,
+        "size": 1,
+        "jump": 1,
+        "end": 463
+    },
+    "dw00": {
+        "start": 463,
+        "size": 1,
+        "jump": 1,
+        "end": 464
     },
     "waypoints": {
-        "start": 360,
+        "start": 464,
         "size": 3,
         "jump": 3,
-        "end": 510
+        "end": 614
     },
     "waypoint_last": {
-        "start": 510,
+        "start": 614,
         "size": 3,
         "jump": 3,
-        "end": 513
+        "end": 617
     },
     "lam_g": {
-        "start": 513,
-        "size": 460,
-        "end": 973
+        "start": 617,
+        "size": 664,
+        "end": 1281
     },
     "time_grid_stage_0": {
-        "start": 973,
-        "end": 1024,
+        "start": 1281,
+        "end": 1332,
         "size": 51
     },
     "monitor_names": [
         "termination_criteria"
     ],
     "monitor_locations": {
-        "termination_criteria": 1024
+        "termination_criteria": 1332
     },
     "mpc_fun_name": "tc_mpc",
     "mpc_file": "./casadi_dir/tc_mpc.casadi",
     "pred_file": "./casadi_dir/tc_pred.casadi",
     "pred_fun_name": "F",
-    "num_inp_ports": 7,
-    "num_out_ports": 7,
+    "num_inp_ports": 9,
+    "num_out_ports": 9,
     "num_props": 0,
-    "num_states": 5,
+    "num_states": 7,
     "num_controls": 2,
-    "num_parameters": 7,
+    "num_parameters": 9,
     "states": [
         "x0",
         "y0",
         "th0",
         "v0",
-        "w0"
-    ],
-    "controls": [
+        "w0",
         "dv0",
         "dw0"
+    ],
+    "controls": [
+        "ddv0",
+        "ddw0"
     ],
     "parameters": [
         "x00",
@@ -126,6 +152,8 @@
         "th00",
         "v00",
         "w00",
+        "dv00",
+        "dw00",
         "waypoints",
         "waypoint_last"
     ],
@@ -166,6 +194,20 @@
             "wvar": "w0"
         },
         {
+            "name": "port_inp_dv00",
+            "var": "dv00",
+            "desc": "[default] Read values for parameter dv00",
+            "warm_start": 1,
+            "wvar": "dv0"
+        },
+        {
+            "name": "port_inp_dw00",
+            "var": "dw00",
+            "desc": "[default] Read values for parameter dw00",
+            "warm_start": 1,
+            "wvar": "dw0"
+        },
+        {
             "name": "port_inp_waypoints",
             "var": "waypoints",
             "grid": "control",
@@ -179,14 +221,14 @@
     ],
     "out_ports": [
         {
-            "name": "port_out_dv0",
-            "var": "dv0",
-            "desc": "[default] write values for control dv0"
+            "name": "port_out_ddv0",
+            "var": "ddv0",
+            "desc": "[default] write values for control ddv0"
         },
         {
-            "name": "port_out_dw0",
-            "var": "dw0",
-            "desc": "[default] write values for control dw0"
+            "name": "port_out_ddw0",
+            "var": "ddw0",
+            "desc": "[default] write values for control ddw0"
         },
         {
             "name": "port_out_x0",
@@ -212,6 +254,16 @@
             "name": "port_out_w0",
             "var": "w0",
             "desc": "output port for the task angular velocities"
+        },
+        {
+            "name": "port_out_dv0",
+            "var": "dv0",
+            "desc": "output port for the task linear acceleration"
+        },
+        {
+            "name": "port_out_dw0",
+            "var": "dw0",
+            "desc": "output port for the task angular acceleration"
         }
     ],
     "props": [],

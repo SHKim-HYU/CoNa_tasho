@@ -49,10 +49,14 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-frame_enable = True
+gui_enable = True
+env_enable = True
+frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = True
+obstacle_avoidance = False
+command_activate = False
+
 
 
 # Select prediction horizon and sample time for the MPC execution
@@ -71,6 +75,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
 _qd['xd_itp']=[[0.0]*horizon_samples]
@@ -80,16 +85,128 @@ _qd['xd_itp']=[[0.0]*horizon_samples]
 _qd['yd_itp']=[[0.0]*horizon_samples]
 
 _global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False; _global_flag['OCP_Solved_mobile'] = False; _global_flag['Interpolated_mobile'] = False;
-_global_flag['isHoming'] = False; _global_flag['initial_data'] = False; _global_flag['trajflag'] = [0]*6;
-_global_flag['isArrived'] = False; _global_flag['base_flag'] = False; _global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
+_global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; _global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
 
 _task_flag['Task_Transition'] = False;
 _task_flag['Task_Robot'] = 0
 
 
+_q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
+_qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
-def publisher_run():
+_qd['xd_itp']=[0.0]*horizon_samples
+_qd['yd_itp']=[0.0]*horizon_samples
+_qd['thd_itp']=[0.0]*horizon_samples
+_qd['vd_itp']=[0.0]*horizon_samples
+_qd['wd_itp']=[0.0]*horizon_samples
+
+_global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False;
+_global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; 
+_global_flag['buf_mobile']=3;
+
+_task_flag['Task_Transition'] = False;
+_task_flag['Task_Robot'] = 0
+
+
+def pub_run():
     pass
+
+def base_pose_CB(data):
+    # quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+    # _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2]
+    # _q['x'] = data.pose.pose.position.x
+    # _q['y'] = data.pose.pose.position.y
+    pass
+
+    
+def base_twist_CB(data):
+    if _global_flag['initial_data']==True:
+        _q['v'] = data.twist.twist.linear.x
+        _q['w'] = data.twist.twist.angular.z
+
+        # compensate odom offset
+        quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+        _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
+        _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
+        _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
+        
+    # init for odom position
+    else:
+        quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+        _q['th0'] = tf.transformations.euler_from_quaternion(quaternion)[2]
+        _q['x0'] = data.pose.pose.position.x
+        _q['y0'] = data.pose.pose.position.y
+        _global_flag['initial_data']=True
+
+def cmd_run():
+
+    rospy.init_node('cona_mpc', anonymous=True)
+
+    if command_activate == True:
+        pub = rospy.Publisher('/planner/cmd_vel', Twist, queue_size=1000)
+    else:
+        pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=10)
+
+    # rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
+    rospy.Subscriber("/odom", Odometry, base_twist_CB)
+
+    base_msg = Twist()
+    base_frq = 10
+    
+    rate = rospy.Rate(base_frq)
+
+    xd_itp_new = []; yd_itp_new = []; thd_itp_new=[];
+    vd_itp_new = []; wd_itp_new = []; 
+    # dvd_itp_new = []; dwd_itp_new = [];
+
+    Kp_mob = [1, 1, 1]
+    Kd_mob = [0.7, 0.7, 0.7]
+
+    while not rospy.is_shutdown():
+
+        init_time=time.time()
+
+        if _global_flag['OCP_Solved'] == True:
+            
+            xd_itp_new = _qd['xd_itp']
+            yd_itp_new = _qd['yd_itp']
+            thd_itp_new = _qd['thd_itp']
+            vd_itp_new = _qd['vd_itp']
+            wd_itp_new = _qd['wd_itp']
+
+            _global_flag['OCP_Solved'] = False
+
+        # When infeasible occuls, to make Vel & Acc zero
+        if len(vd_itp_new) == 0:
+            base_msg.linear.x = 0
+            base_msg.linear.y = 0
+            base_msg.linear.z = 0
+
+            base_msg.angular.x = 0
+            base_msg.angular.y = 0
+            base_msg.angular.z = 0
+        else:
+            x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
+            y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
+            th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
+            
+            J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
+            v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
+            
+            base_msg.linear.x = vd_itp_new.pop(0)
+            base_msg.linear.y = 0
+            base_msg.linear.z = 0
+
+            base_msg.angular.x = 0
+            base_msg.angular.y = 0
+            base_msg.angular.z = wd_itp_new.pop(0)
+            print(base_msg)
+
+        pub.publish(base_msg)
+
+        rate.sleep()
+
 
 
 def mpc_run():
@@ -109,7 +226,7 @@ def mpc_run():
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
     max_task_acc = cs.DM([3, 3*pi])
-    max_task_jerk = cs.DM([200,200*pi])
+    max_task_jerk = cs.DM([20,20*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
     robot.set_task_jerk_limits(lb=-max_task_jerk, ub=max_task_jerk)
@@ -143,14 +260,14 @@ def mpc_run():
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 1e-1, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 1e0, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 1e-1, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 1e0, stage = 0)
 
-    tc.add_regularization(expression = ddv_0, weight = 1e-2, stage = 0)
-    tc.add_regularization(expression = ddw_0, weight = 1e-2, stage = 0)
+    tc.add_regularization(expression = ddv_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = ddw_0, weight = 1e-1, stage = 0)
 
     # Path_constraint
     path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e1, 'norm':'L2'}
@@ -178,21 +295,23 @@ def mpc_run():
     tc.set_initial(ddw_0, 0, stage=0)
 
     # Define reference path
-    pathpoints = 300
+    pathpoints = 200
     ref_path = {}
-    ref_path['x'] = 1.7*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    # pathpoints = 200
+    # ref_path = {}
+    # ref_path['x'] = np.linspace(0,0, pathpoints+1)
+    # ref_path['y'] = np.linspace(0,10, pathpoints+1)
+    # ref_path['theta'] = np.linspace(pi/2,pi/2, pathpoints+1)
 
     if obstacle_avoidance==True:
         ref_obs = {}
         ref_obs['x'] = np.array([0.2, 0.0])
         ref_obs['y'] = np.array([2.5, 6])
-
-    # ref_path['x'] = np.linspace(0,5, pathpoints+1)
-    # ref_path['y'] = np.linspace(0,0, pathpoints+1)
-    # ref_path['theta'] = np.linspace(0,0, pathpoints+1)
 
     wp = cs.horzcat(ref_path['x'], ref_path['y'], ref_path['theta']).T
 
@@ -296,7 +415,7 @@ def mpc_run():
     ################################################
 
     # Create world simulator based on pybullet
-    obj = WorldSimulator.WorldSimulator(bullet_gui=True)
+    obj = WorldSimulator.WorldSimulator(bullet_gui=gui_enable)
     obj.visualization_realtime=True
     # Add robot to the world environment
     position = [0.0, 0.0, 0.0]
@@ -361,16 +480,21 @@ def mpc_run():
     q_dot_log = []
     predicted_pos_log = []
 
-    x_pred = [0]*horizon_samples
-    y_pred = [0]*horizon_samples
-    th_pred = [0]*horizon_samples
-    q_pred = [0]*horizon_samples
+    x_pred = [0]*(horizon_samples+1)
+    y_pred = [0]*(horizon_samples+1)
+    th_pred = [0]*(horizon_samples+1)
+    v_pred = [0]*(horizon_samples+1)
+    w_pred = [0]*(horizon_samples+1)
+
+    q_pred = [0]*(horizon_samples+1)
+
 
     cnt=0
     glob_time=time.time()
     glob_time_buf=0
     init_time_buf=0
     loop_time = 0
+    dvd_control_sig = 0; dwd_control_sig = 0
     while True:
         init_time=time.time()
         print("----------- MPC execution -----------")
@@ -386,6 +510,8 @@ def mpc_run():
         MPC_component.input_ports["port_inp_th00"]["val"] = q_now[2]
         MPC_component.input_ports["port_inp_v00"]["val"] = np.sqrt(dq_now[0]**2+dq_now[1]**2)
         MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[2]
+        MPC_component.input_ports["port_inp_dv00"]["val"] = dvd_control_sig
+        MPC_component.input_ports["port_inp_dw00"]["val"] = dwd_control_sig
 
         # Find closest point on the reference path compared witch current position
         index_closest_point = find_closest_point(q_now[:2], ref_path, index_closest_point)
@@ -412,14 +538,27 @@ def mpc_run():
 
         MPC_component.runMPC()
 
+        sol = MPC_component.res_vals
+        for i in range(horizon_samples+1):
+            # 1st eliment: current value, 2nd~horizon: predicted value
+            x_pred[i]=sol[i].full()[0][0]
+            y_pred[i]=sol[(horizon_samples+1)+i].full()[0][0]
+            th_pred[i]=sol[2*(horizon_samples+1)+i].full()[0][0]
+
+            v_pred[i]=sol[3*(horizon_samples+1)+i].full()[0][0]
+            w_pred[i]=sol[4*(horizon_samples+1)+i].full()[0][0]
+
+            q_pred[i] = [x_pred[i], y_pred[i], th_pred[i]]
+
         if frame_enable==True:
-            sol = MPC_component.res_vals
-            for i in range(horizon_samples):
-                x_pred[i]=sol[i+1].full()
-                y_pred[i]=sol[horizon_samples+i+1].full()
-                th_pred[i]=sol[2*horizon_samples+i+1].full()
-                q_pred[i] = [x_pred[i], y_pred[i], th_pred[i]]
-            obj.resetMultiJointState(frameIDs, joint_indices, q_pred)
+            obj.resetMultiJointState(frameIDs, joint_indices, q_pred[1:])
+
+        _qd['xd_itp']=x_pred
+        _qd['yd_itp']=y_pred
+        _qd['thd_itp']=th_pred
+        _qd['vd_itp']=v_pred
+        _qd['wd_itp']=w_pred
+        _global_flag['OCP_Solved'] = True
 
         q_log.append(q_now)
         q_dot_log.append(dq_now)
@@ -464,14 +603,18 @@ def mpc_run():
 
 if __name__=='__main__':
     mpc_task = Process(target=mpc_run, args=())
-    publisher_task = Process(target=publisher_run, args=())
+    cmd_task = Process(target=cmd_run, args=())
+    pub_task = Process(target=pub_run, args=())
     try:
         mpc_task.start()
-        publisher_task.start()
+        cmd_task.start()
+        pub_task.start()
 
         mpc_task.join()
-        publisher_task.join()
+        cmd_task.join()
+        pub_task.join()
 
     except KeyboardInterrupt:
         mpc_task.terminate()
-        publisher_task.terminate()
+        cmd_task.terminate()
+        pub_task.terminate()

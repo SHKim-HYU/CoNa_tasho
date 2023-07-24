@@ -50,13 +50,13 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
-command_activate = True
+command_activate = False
 
 
 # Select prediction horizon and sample time for the MPC execution
@@ -88,7 +88,7 @@ _qd['wd_itp']=[0.0]*horizon_samples
 
 _global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False;
 _global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; 
-_global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
+_global_flag['buf_mobile']=3;
 
 _task_flag['Task_Transition'] = False;
 _task_flag['Task_Robot'] = 0
@@ -134,7 +134,7 @@ def cmd_run():
     rospy.Subscriber("/odom", Odometry, base_twist_CB)
 
     base_msg = Twist()
-    base_frq = 15
+    base_frq = 10
     
     rate = rospy.Rate(base_frq)
 
@@ -239,11 +239,11 @@ def mpc_run():
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 5e-1, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 5e-1, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 1e0, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 1e0, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 4e0, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 4e0, stage = 0)
 
     # Path_constraint
     path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e0, 'norm':'L2'}
