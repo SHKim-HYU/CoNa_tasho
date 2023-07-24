@@ -50,13 +50,13 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = True
-env_enable = True
+gui_enable = False
+env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
-command_activate = False
+command_activate = True
 
 
 # Select prediction horizon and sample time for the MPC execution
@@ -112,7 +112,7 @@ def base_twist_CB(data):
         _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
         _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
         _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
-
+        
     # init for odom position
     else:
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
@@ -126,9 +126,9 @@ def cmd_run():
     rospy.init_node('cona_mpc', anonymous=True)
 
     if command_activate == True:
-        pub = rospy.Publisher('/cona2/cmd_vel', Twist, queue_size=1000)
+        pub = rospy.Publisher('/planner/cmd_vel', Twist, queue_size=1000)
     else:
-        pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=1000)
+        pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=10)
 
     # rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
     rospy.Subscriber("/odom", Odometry, base_twist_CB)
@@ -176,13 +176,14 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            base_msg.angular.z = wd_itp_new.pop(0)
+            print(base_msg)
 
         pub.publish(base_msg)
 
@@ -238,11 +239,11 @@ def mpc_run():
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 1e-1, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 5e-1, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 5e-1, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 4e-1, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 4e-1, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 1e0, stage = 0)
 
     # Path_constraint
     path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e0, 'norm':'L2'}
@@ -270,7 +271,7 @@ def mpc_run():
     # Define reference path
     pathpoints = 200
     ref_path = {}
-    ref_path['x'] = 0.75*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     ref_path['theta'] = theta_path + [theta_path[-1]]
