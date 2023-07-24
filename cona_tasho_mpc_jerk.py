@@ -556,7 +556,6 @@ def mpc_run():
             robotID, "velocity", joint_indices, targetVelocities=twist_d
         )
         print("v: ", vd_control_sig, ", w: ", wd_control_sig)
-        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         # Simulate
         obj.run_simulation(no_samples)
         end=time.time()
@@ -567,6 +566,7 @@ def mpc_run():
 
         cnt+=1
         
+        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         while time.time()-init_time<t_mpc:
                 time.sleep(1/100000000)
                 glob_time_buf=time.time()
