@@ -50,20 +50,20 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = True
+obstacle_avoidance = False
 command_activate = False
 
 
 # Select prediction horizon and sample time for the MPC execution
-# horizon_samples = 50
-# t_mpc = 0.1 #in seconds
-horizon_samples = 75
-t_mpc = 1/15
+horizon_samples = 50
+t_mpc = 0.1 #in seconds
+# horizon_samples = 75
+# t_mpc = 1/15
 
 #############################################################################
 ################## Manager for global data multiprocessing ##################
@@ -77,6 +77,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
 _qd['xd_itp']=[0.0]*horizon_samples
@@ -86,34 +87,50 @@ _qd['vd_itp']=[0.0]*horizon_samples
 _qd['wd_itp']=[0.0]*horizon_samples
 
 _global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False;
-_global_flag['isHoming'] = False; _global_flag['initial_data'] = False; _global_flag['trajflag'] = [0]*6;
-_global_flag['isArrived'] = False; _global_flag['base_flag'] = False; _global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
+_global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; 
+_global_flag['PVNet_received'] = False; _global_flag['buf_mobile']=3;
 
 _task_flag['Task_Transition'] = False;
 _task_flag['Task_Robot'] = 0
 
 
 def base_pose_CB(data):
-    quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
-    _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2]
-    _q['x'] = data.pose.pose.position.x
-    _q['y'] = data.pose.pose.position.y
+    # quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+    # _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2]
+    # _q['x'] = data.pose.pose.position.x
+    # _q['y'] = data.pose.pose.position.y
+    pass
 
     
 def base_twist_CB(data):
-    _q['v'] = data.twist.twist.linear.x
-    _q['w'] = data.twist.twist.angular.z
+    if _global_flag['initial_data']==True:
+        _q['v'] = data.twist.twist.linear.x
+        _q['w'] = data.twist.twist.angular.z
+
+        # compensate odom offset
+        quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+        _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
+        _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
+        _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
+
+    # init for odom position
+    else:
+        quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+        _q['th0'] = tf.transformations.euler_from_quaternion(quaternion)[2]
+        _q['x0'] = data.pose.pose.position.x
+        _q['y0'] = data.pose.pose.position.y
+        _global_flag['initial_data']=True
 
 def cmd_run():
 
     rospy.init_node('cona_mpc', anonymous=True)
 
     if command_activate == True:
-        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1000)
+        pub = rospy.Publisher('/cona2/cmd_vel', Twist, queue_size=1000)
     else:
         pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=1000)
 
-    rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
+    # rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, base_pose_CB)
     rospy.Subscriber("/odom", Odometry, base_twist_CB)
 
     base_msg = Twist()
@@ -152,13 +169,20 @@ def cmd_run():
             base_msg.angular.y = 0
             base_msg.angular.z = 0
         else:
-            base_msg.linear.x = vd_itp_new.pop(0)
+            x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
+            y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
+            th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
+            
+            J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
+            v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
+            
+            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = wd_itp_new.pop(0)
+            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
 
         pub.publish(base_msg)
 
@@ -209,7 +233,7 @@ def mpc_run():
         switch = tc.create_parameter('switch',(1,1), stage=0)
         obs_p = tc.create_parameter('obs_p', (2,1), stage=0)
         # obs_p = tc.create_parameter('obs_p', (2,1), stage=0, grid='control')
-        obs_r = 1
+        obs_r = 0.5
         obs_con = {'inequality':True, 'hard':False, 'expression':np.sqrt(cs.sumsqr(p[0:2]-obs_p)), 'lower_limits':obs_r, 'norm':'L1', 'gain':switch*1e0}
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
@@ -244,21 +268,23 @@ def mpc_run():
     tc.set_initial(dw_0, 0, stage=0)
 
     # Define reference path
-    pathpoints = 300
+    pathpoints = 200
     ref_path = {}
-    ref_path['x'] = 1.7*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['x'] = 0.75*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    # pathpoints = 200
+    # ref_path = {}
+    # ref_path['x'] = np.linspace(0,0, pathpoints+1)
+    # ref_path['y'] = np.linspace(0,10, pathpoints+1)
+    # ref_path['theta'] = np.linspace(pi/2,pi/2, pathpoints+1)
 
     if obstacle_avoidance==True:
         ref_obs = {}
         ref_obs['x'] = np.array([0.2, 0.0])
         ref_obs['y'] = np.array([2.5, 6])
-
-    # ref_path['x'] = np.linspace(0,5, pathpoints+1)
-    # ref_path['y'] = np.linspace(0,0, pathpoints+1)
-    # ref_path['theta'] = np.linspace(0,0, pathpoints+1)
 
     wp = cs.horzcat(ref_path['x'], ref_path['y'], ref_path['theta']).T
 
@@ -313,7 +339,7 @@ def mpc_run():
     ################################################
     # Set solver and discretization options
     ################################################
-    sol_options = {"ipopt": {"print_level": 5}}
+    sol_options = {"ipopt": {"linear_solver": "ma27","print_level": 0}}
     tc.set_ocp_solver('ipopt', sol_options)
     mpc_options = default_mpc_options.get_default_mpc_options()
     # tc.set_ocp_solver(mpc_options['ipopt_lbfgs_hsl']['solver_name'], mpc_options['ipopt_lbfgs_hsl']['options'])
@@ -379,9 +405,9 @@ def mpc_run():
         package_path = tasho.__path__[0]
         if obstacle_avoidance==True:
             # [ToDo] Describe obstacles
-            obs1 = env.Cube(length = 0.7, position = [ref_obs['x'][0], ref_obs['y'][0], 0.35], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
+            obs1 = env.Cube(length = 0.2, position = [ref_obs['x'][0], ref_obs['y'][0], 0.1], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
             environment.add_object(obs1, "obs1")
-            obs2 = env.Cube(length = 0.7, position = [ref_obs['x'][1], ref_obs['y'][1], 0.35], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
+            obs2 = env.Cube(length = 0.2, position = [ref_obs['x'][1], ref_obs['y'][1], 0.1], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
             environment.add_object(obs2, "obs2")
 
         for i in range(pathpoints):

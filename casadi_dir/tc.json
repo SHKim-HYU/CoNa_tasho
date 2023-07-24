@@ -3,130 +3,112 @@
         "start": 0,
         "size": 1,
         "jump": 1,
-        "end": 76
+        "end": 51
     },
     "y0": {
-        "start": 76,
+        "start": 51,
         "size": 1,
         "jump": 1,
-        "end": 152
+        "end": 102
     },
     "th0": {
-        "start": 152,
+        "start": 102,
         "size": 1,
         "jump": 1,
-        "end": 228
+        "end": 153
     },
     "v0": {
-        "start": 228,
+        "start": 153,
         "size": 1,
         "jump": 1,
-        "end": 304
+        "end": 204
     },
     "w0": {
-        "start": 304,
+        "start": 204,
         "size": 1,
         "jump": 1,
-        "end": 380
+        "end": 255
     },
     "dv0": {
-        "start": 380,
+        "start": 255,
         "size": 1,
         "jump": 1,
-        "end": 455
+        "end": 305
     },
     "dw0": {
-        "start": 455,
+        "start": 305,
         "size": 1,
         "jump": 1,
-        "end": 530
-    },
-    "slack_path_con_58050": {
-        "start": 530,
-        "size": 1,
-        "jump": 1,
-        "end": 605
+        "end": 355
     },
     "x00": {
-        "start": 605,
+        "start": 355,
         "size": 1,
         "jump": 1,
-        "end": 606
+        "end": 356
     },
     "y00": {
-        "start": 606,
+        "start": 356,
         "size": 1,
         "jump": 1,
-        "end": 607
+        "end": 357
     },
     "th00": {
-        "start": 607,
+        "start": 357,
         "size": 1,
         "jump": 1,
-        "end": 608
+        "end": 358
     },
     "v00": {
-        "start": 608,
+        "start": 358,
         "size": 1,
         "jump": 1,
-        "end": 609
+        "end": 359
     },
     "w00": {
-        "start": 609,
+        "start": 359,
         "size": 1,
         "jump": 1,
-        "end": 610
+        "end": 360
     },
     "waypoints": {
-        "start": 610,
+        "start": 360,
         "size": 3,
         "jump": 3,
-        "end": 835
+        "end": 510
     },
     "waypoint_last": {
-        "start": 835,
+        "start": 510,
         "size": 3,
         "jump": 3,
-        "end": 838
-    },
-    "switch": {
-        "start": 838,
-        "size": 1,
-        "jump": 1,
-        "end": 839
-    },
-    "obs_p": {
-        "start": 839,
-        "size": 2,
-        "jump": 2,
-        "end": 841
+        "end": 513
     },
     "lam_g": {
-        "start": 841,
-        "size": 837,
-        "end": 1678
+        "start": 513,
+        "size": 460,
+        "end": 973
     },
     "time_grid_stage_0": {
-        "start": 1678,
-        "end": 1754,
-        "size": 76
+        "start": 973,
+        "end": 1024,
+        "size": 51
     },
     "monitor_names": [
         "termination_criteria"
     ],
     "monitor_locations": {
-        "termination_criteria": 1754
+        "termination_criteria": 1024
     },
     "mpc_fun_name": "tc_mpc",
     "mpc_file": "./casadi_dir/tc_mpc.casadi",
     "pred_file": "./casadi_dir/tc_pred.casadi",
     "pred_fun_name": "F",
-    "num_inp_ports": 9,
-    "num_out_ports": 8,
+    "num_inp_ports": 7,
+    "num_out_ports": 7,
     "num_props": 0,
     "num_states": 5,
-    "num_controls": 3,
-    "num_parameters": 9,
+    "num_controls": 2,
+    "num_parameters": 7,
     "states": [
         "x0",
         "y0",
@@ -136,8 +118,7 @@
     ],
     "controls": [
         "dv0",
-        "dw0",
-        "slack_path_con_58050"
+        "dw0"
     ],
     "parameters": [
         "x00",
@@ -146,9 +127,7 @@
         "v00",
         "w00",
         "waypoints",
-        "waypoint_last",
-        "switch",
-        "obs_p"
+        "waypoint_last"
     ],
     "inp_ports": [
         {
@@ -196,16 +175,6 @@
             "name": "port_inp_waypoint_last",
             "var": "waypoint_last",
             "desc": "[default] Read values for parameter waypoint_last"
-        },
-        {
-            "name": "port_inp_switch",
-            "var": "switch",
-            "desc": "[default] Read values for parameter switch"
-        },
-        {
-            "name": "port_inp_obs_p",
-            "var": "obs_p",
-            "desc": "[default] Read values for parameter obs_p"
         }
     ],
     "out_ports": [
@@ -218,11 +187,6 @@
             "name": "port_out_dw0",
             "var": "dw0",
             "desc": "[default] write values for control dw0"
-        },
-        {
-            "name": "port_out_slack_path_con_58050",
-            "var": "slack_path_con_58050",
-            "desc": "[default] write values for control slack_path_con_58050"
         },
         {
             "name": "port_out_x0",
@@ -251,8 +215,8 @@
         }
     ],
     "props": [],
-    "horizon": 75,
-    "sampling_time": 0.06666666666666667,
+    "horizon": 50,
+    "sampling_time": 0.1,
     "ocp_fun_name": "tc_ocp",
     "ocp_file": "./casadi_dir/tc_ocp.casadi"
 }
