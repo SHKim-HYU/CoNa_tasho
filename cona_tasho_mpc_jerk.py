@@ -35,6 +35,8 @@ import copy
 import os
 import numpy as np
 
+from scipy.interpolate import interp1d,BSpline
+from scipy import interpolate
 
 from multiprocessing import Process, Manager
 import rospy
@@ -62,6 +64,7 @@ command_activate = False
 # Select prediction horizon and sample time for the MPC execution
 horizon_samples = 50
 t_mpc = 0.1 #in seconds
+duration = t_mpc*horizon_samples
 
 #############################################################################
 ################## Manager for global data multiprocessing ##################
@@ -94,7 +97,6 @@ _task_flag['Task_Robot'] = 0
 
 def base_pose_CB(data):
     if _global_flag['initial_data']==True:
-
         # compensate odom offset
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
         _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
@@ -130,7 +132,7 @@ def cmd_run():
 
     mpc_res = Float64MultiArray()
     base_msg = Twist()
-    base_frq = 10
+    base_frq = 15
     
     rate = rospy.Rate(base_frq)
 
@@ -147,11 +149,19 @@ def cmd_run():
 
         if _global_flag['OCP_Solved'] == True:
             
-            xd_itp_new = _qd['xd_itp']
-            yd_itp_new = _qd['yd_itp']
-            thd_itp_new = _qd['thd_itp']
-            vd_itp_new = _qd['vd_itp']
-            wd_itp_new = _qd['wd_itp']
+            t_itp = np.linspace(0,duration, num=horizon_samples, endpoint=True)
+            t_itp_new = np.linspace(0,duration, num=int(base_frq*t_mpc)*(horizon_samples), endpoint=True)
+
+            v_f = interp1d(t_itp, _qd['vd_itp'], kind='cubic')
+            w_f = interp1d(t_itp, _qd['wd_itp'], kind='cubic')
+
+            vd_itp_new = list(v_f(t_itp_new))
+            wd_itp_new = list(w_f(t_itp_new))
+            # xd_itp_new = _qd['xd_itp']
+            # yd_itp_new = _qd['yd_itp']
+            # thd_itp_new = _qd['thd_itp']
+            # vd_itp_new = _qd['vd_itp']
+            # wd_itp_new = _qd['wd_itp']
             # mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
             #             _qd['v'], _qd['w'],
             #             _qd['dv'], _qd['dw'],
@@ -170,12 +180,12 @@ def cmd_run():
             base_msg.angular.y = 0
             base_msg.angular.z = 0
         else:
-            x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
-            y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
-            th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
+            # x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
+            # y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
+            # th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
             
-            J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
-            v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
+            # J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
+            # v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
             base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
