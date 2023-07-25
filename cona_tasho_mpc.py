@@ -55,7 +55,7 @@ env_enable = True
 frame_enable = True
 HSL = False
 time_optimal = False
-obstacle_avoidance = False
+obstacle_avoidance = True
 command_activate = False
 
 
@@ -239,24 +239,24 @@ def mpc_run():
         switch = tc.create_parameter('switch',(1,1), stage=0)
         obs_p = tc.create_parameter('obs_p', (2,1), stage=0)
         # obs_p = tc.create_parameter('obs_p', (2,1), stage=0, grid='control')
-        obs_r = 0.5
+        obs_r = 1
         obs_con = {'inequality':True, 'hard':False, 'expression':np.sqrt(cs.sumsqr(p[0:2]-obs_p)), 'lower_limits':obs_r, 'norm':'L1', 'gain':switch*1e0}
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 1e-3, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 1e-3, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 5e0, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 5e0, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 4e-3, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 4e-3, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 4e0, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 4e0, stage = 0)
 
     # Path_constraint
-    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e0, 'norm':'L2'}
-    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':2e0, 'norm':'L2'}
-    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':2e0, 'norm':'L2'}
+    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
+    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
+    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"path_constraints":[path_pos1, path_pos2, path_pos3]}, stage = 0)
 
-    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':2e0, 'norm':'L2'}
+    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"final_constraints":[final_pos]}, stage = 0)
 
     ################################################
@@ -276,10 +276,17 @@ def mpc_run():
     # Define reference path
     pathpoints = 300
     ref_path = {}
-    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['x'] = 1.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    # pathpoints = 200
+    # ref_path = {}
+    # ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    # ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
+    # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
+    # ref_path['theta'] = theta_path + [theta_path[-1]]
 
     # pathpoints = 200
     # ref_path = {}
@@ -308,7 +315,7 @@ def mpc_run():
         # Set initial switch value for obstacle avoidance
         dist_obs, closest_obs = find_closest_obstacle(q0_val[:2], ref_obs)
         tc.set_value(obs_p,[ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]], stage=0)
-        if dist_obs>=2:
+        if dist_obs>=5:
             tc.set_value(switch,0,stage=0)
         else:
             tc.set_value(switch,1,stage=0)
@@ -411,9 +418,9 @@ def mpc_run():
         package_path = tasho.__path__[0]
         if obstacle_avoidance==True:
             # [ToDo] Describe obstacles
-            obs1 = env.Cube(length = 0.2, position = [ref_obs['x'][0], ref_obs['y'][0], 0.1], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
+            obs1 = env.Cube(length = 0.7, position = [ref_obs['x'][0], ref_obs['y'][0], 0.35], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
             environment.add_object(obs1, "obs1")
-            obs2 = env.Cube(length = 0.2, position = [ref_obs['x'][1], ref_obs['y'][1], 0.1], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
+            obs2 = env.Cube(length = 0.7, position = [ref_obs['x'][1], ref_obs['y'][1], 0.35], orientation = [0.0, 0.0, 0.0, 1.0], urdf = package_path+"/models/objects/cube.urdf")
             environment.add_object(obs2, "obs2")
 
         for i in range(pathpoints):
@@ -507,7 +514,7 @@ def mpc_run():
             # dist_obs, closest_obs = find_closest_obstacle(q_now[:2], ref_obs)
             dist_obs, closest_obs = find_closest_obstacle([_qd['x'],_qd['y']], ref_obs)
             MPC_component.input_ports["port_inp_obs_p"]["val"] = [ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]]
-            if dist_obs>=2:
+            if dist_obs>=5:
                 print("dist_obs: ", dist_obs, "switch: ",0, "idx_obs: ",closest_obs)
                 MPC_component.input_ports["port_inp_switch"]["val"] = 0
             else:
@@ -539,7 +546,7 @@ def mpc_run():
 
 
         if frame_enable==True:
-            obj.resetMultiJointState(frameIDs, joint_indices, q_pred[1:])
+            obj.resetMultiJointState(frameIDs, joint_indices, q_pred)
 
         _qd['xd_itp']=x_pred
         _qd['yd_itp']=y_pred

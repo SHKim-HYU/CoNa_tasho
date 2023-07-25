@@ -51,10 +51,10 @@ from nav_msgs.msg import Odometry
 
 gui_enable = True
 env_enable = True
-frame_enable = False
+frame_enable = True
 HSL = False
 time_optimal = False
-obstacle_avoidance = False
+obstacle_avoidance = True
 command_activate = False
 
 
@@ -209,7 +209,7 @@ def mpc_run():
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
     max_task_acc = cs.DM([3, 3*pi])
-    max_task_jerk = cs.DM([200,200*pi])
+    max_task_jerk = cs.DM([20,20*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
     robot.set_task_jerk_limits(lb=-max_task_jerk, ub=max_task_jerk)
@@ -243,23 +243,23 @@ def mpc_run():
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 5e-1, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 5e-1, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 5e0, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 5e0, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 4e-1, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 4e-1, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 4e0, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 4e0, stage = 0)
 
-    tc.add_regularization(expression = ddv_0, weight = 1e-2, stage = 0)
-    tc.add_regularization(expression = ddw_0, weight = 1e-2, stage = 0)
+    tc.add_regularization(expression = ddv_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = ddw_0, weight = 1e0, stage = 0)
 
     # Path_constraint
-    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e1, 'norm':'L2'}
-    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':2e1, 'norm':'L2'}
-    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':2e1, 'norm':'L2'}
+    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
+    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
+    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"path_constraints":[path_pos1, path_pos2, path_pos3]}, stage = 0)
 
     # fina
-    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':2e1, 'norm':'L2'}
+    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e1, 'norm':'L2'}
     tc.add_task_constraint({"final_constraints":[final_pos]}, stage = 0)
 
     ################################################
@@ -281,10 +281,17 @@ def mpc_run():
     # Define reference path
     pathpoints = 300
     ref_path = {}
-    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['x'] = 1.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    # pathpoints = 200
+    # ref_path = {}
+    # ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    # ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
+    # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
+    # ref_path['theta'] = theta_path + [theta_path[-1]]
 
     # pathpoints = 200
     # ref_path = {}
@@ -313,7 +320,7 @@ def mpc_run():
         # Set initial switch value for obstacle avoidance
         dist_obs, closest_obs = find_closest_obstacle(q0_val[:2], ref_obs)
         tc.set_value(obs_p,[ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]], stage=0)
-        if dist_obs>=2:
+        if dist_obs>=5:
             tc.set_value(switch,0,stage=0)
         else:
             tc.set_value(switch,1,stage=0)
@@ -524,7 +531,7 @@ def mpc_run():
             # dist_obs, closest_obs = find_closest_obstacle(q_now[:2], ref_obs)
             dist_obs, closest_obs = find_closest_obstacle([_qd['x'],_qd['y']], ref_obs)
             MPC_component.input_ports["port_inp_obs_p"]["val"] = [ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]]
-            if dist_obs>=2:
+            if dist_obs>=5:
                 print("dist_obs: ", dist_obs, "switch: ",0, "idx_obs: ",closest_obs)
                 MPC_component.input_ports["port_inp_switch"]["val"] = 0
             else:
