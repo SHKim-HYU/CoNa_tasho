@@ -96,6 +96,26 @@ _task_flag['Task_Robot'] = 0
 
 
 def base_pose_CB(data):
+    # if _global_flag['initial_data']==True:
+    #     # compensate odom offset
+    #     quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+    #     _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
+    #     _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
+    #     _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
+        
+    # # init for odom position
+    # else:
+    #     quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+    #     _q['th0'] = tf.transformations.euler_from_quaternion(quaternion)[2]
+    #     _q['x0'] = data.pose.pose.position.x
+    #     _q['y0'] = data.pose.pose.position.y
+    #     _global_flag['initial_data']=True
+    pass
+    
+def base_twist_CB(data):
+    _q['v'] = data.twist.twist.linear.x
+    _q['w'] = data.twist.twist.angular.z
+
     if _global_flag['initial_data']==True:
         # compensate odom offset
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
@@ -110,11 +130,6 @@ def base_pose_CB(data):
         _q['x0'] = data.pose.pose.position.x
         _q['y0'] = data.pose.pose.position.y
         _global_flag['initial_data']=True
-
-    
-def base_twist_CB(data):
-    _q['v'] = data.twist.twist.linear.x
-    _q['w'] = data.twist.twist.angular.z
 
 
 def cmd_run():
@@ -164,8 +179,9 @@ def cmd_run():
             # wd_itp_new = _qd['wd_itp']
             mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
-                        _qd['dv'], _qd['dw'],
-                        _qd['ddv'], _qd['ddw']]
+                        _q['x'],_q['y'],_q['th']]
+                        # _qd['dv'], _qd['dw'],
+                        # _qd['ddv'], _qd['ddw']]
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
