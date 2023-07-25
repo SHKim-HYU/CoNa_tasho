@@ -274,19 +274,19 @@ def mpc_run():
     tc.set_initial(dw_0, 0, stage=0)
 
     # Define reference path
-    pathpoints = 300
-    ref_path = {}
-    ref_path['x'] = 1.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
-    ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
-    theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
-    ref_path['theta'] = theta_path + [theta_path[-1]]
-
-    # pathpoints = 200
+    # pathpoints = 300
     # ref_path = {}
-    # ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    # ref_path['x'] = 1.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     # ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
     # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     # ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    pathpoints = 200
+    ref_path = {}
+    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
+    theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
+    ref_path['theta'] = theta_path + [theta_path[-1]]
 
     # pathpoints = 200
     # ref_path = {}
