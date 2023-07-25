@@ -529,7 +529,7 @@ def mpc_run():
 
         q_log.append(q_now)
         q_dot_log.append(dq_now)
-        print("comp time = %f[ms]"%(1000*(time.time()-start)))
+        
         # Set control signal to the simulated robot
         xd_control_sig = MPC_component.output_ports["port_out_x0"]["val"].full()
         yd_control_sig = MPC_component.output_ports["port_out_y0"]["val"].full()
@@ -554,7 +554,7 @@ def mpc_run():
             break
 
         cnt+=1
-        
+        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         
         while time.time()-init_time<t_mpc:
                 time.sleep(1/100000000)
