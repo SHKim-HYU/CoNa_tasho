@@ -54,7 +54,7 @@ env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = True
+obstacle_avoidance = False
 command_activate = False
 
 
