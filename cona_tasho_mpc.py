@@ -136,7 +136,7 @@ def cmd_run():
 
     mpc_res = Float64MultiArray()
     base_msg = Twist()
-    base_frq = 10
+    base_frq = 15
     
     rate = rospy.Rate(base_frq)
 
@@ -166,12 +166,11 @@ def cmd_run():
             # thd_itp_new = _qd['thd_itp']
             # vd_itp_new = _qd['vd_itp']
             # wd_itp_new = _qd['wd_itp']
-            # mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
-            #             _qd['v'], _qd['w'],
-            #             _qd['dv'], _qd['dw'],
-            #             _qd['ddv'], _qd['ddw']]
-            mpc_res.data = [_q['t']]
-            # mpc_pub.publish(mpc_res)
+            mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
+                        _qd['v'], _qd['w'],
+                        _qd['dv'], _qd['dw']]
+            # mpc_res.data = [_q['t']]
+            mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
 
         # When infeasible occuls, to make Vel & Acc zero
@@ -200,6 +199,7 @@ def cmd_run():
             base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
+        
         pub.publish(base_msg)
 
         rate.sleep()

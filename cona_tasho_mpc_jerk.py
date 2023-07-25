@@ -162,12 +162,12 @@ def cmd_run():
             # thd_itp_new = _qd['thd_itp']
             # vd_itp_new = _qd['vd_itp']
             # wd_itp_new = _qd['wd_itp']
-            # mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
-            #             _qd['v'], _qd['w'],
-            #             _qd['dv'], _qd['dw'],
-            #             _qd['ddv'], _qd['ddw']]
-            mpc_res.data = [_q['t']]
-            # mpc_pub.publish(mpc_res)
+            mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
+                        _qd['v'], _qd['w'],
+                        _qd['dv'], _qd['dw'],
+                        _qd['ddv'], _qd['ddw']]
+            # mpc_res.data = [_q['t']]
+            mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
 
         # When infeasible occuls, to make Vel & Acc zero
