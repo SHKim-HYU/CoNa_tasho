@@ -49,9 +49,9 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = True
-env_enable = True
-frame_enable = True
+gui_enable = False
+env_enable = False
+frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = True
@@ -75,7 +75,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
-_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0; _q['t']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; _qd['ddv']=0.0; _qd['ddw']=0.0;
 
 _qd['xd_itp']=[0.0]*horizon_samples
@@ -147,16 +147,17 @@ def cmd_run():
 
         if _global_flag['OCP_Solved'] == True:
             
-            xd_itp_new = _qd['xd_itp'][1:]
-            yd_itp_new = _qd['yd_itp'][1:]
-            thd_itp_new = _qd['thd_itp'][1:]
-            vd_itp_new = _qd['vd_itp'][1:]
-            wd_itp_new = _qd['wd_itp'][1:]
-            mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
-                        _qd['v'], _qd['w'],
-                        _qd['dv'], _qd['dw'],
-                        _qd['ddv'], _qd['ddw']]
-            mpc_pub.publish(mpc_res)
+            xd_itp_new = _qd['xd_itp']
+            yd_itp_new = _qd['yd_itp']
+            thd_itp_new = _qd['thd_itp']
+            vd_itp_new = _qd['vd_itp']
+            wd_itp_new = _qd['wd_itp']
+            # mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
+            #             _qd['v'], _qd['w'],
+            #             _qd['dv'], _qd['dw'],
+            #             _qd['ddv'], _qd['ddw']]
+            mpc_res.data = [_q['t']]
+            # mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
 
         # When infeasible occuls, to make Vel & Acc zero
@@ -615,6 +616,7 @@ def mpc_run():
                 init_time_buf=init_time
 
         loop_time = time.time()-init_time
+        _q['t']=1000*loop_time
         init_time_buf=init_time
 
     obj.end_simulation()

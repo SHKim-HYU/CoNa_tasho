@@ -161,7 +161,7 @@ def cmd_run():
             mpc_res.data = [_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
                         _qd['dv'], _qd['dw']]
-            mpc_pub.publish(mpc_res)
+            # mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
 
         # When infeasible occuls, to make Vel & Acc zero
