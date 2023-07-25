@@ -183,7 +183,7 @@ def cmd_run():
             base_msg.angular.x = 0
             base_msg.angular.y = 0
             base_msg.angular.z = wd_itp_new.pop(0)
-            print(base_msg)
+            # print(base_msg)
 
         pub.publish(base_msg)
 
