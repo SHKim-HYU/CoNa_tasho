@@ -176,7 +176,7 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
@@ -206,7 +206,7 @@ def mpc_run():
     # Update robot's parameters if needed
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
-    max_task_acc = cs.DM([1, pi])
+    max_task_acc = cs.DM([3, 3*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
 
@@ -447,12 +447,6 @@ def mpc_run():
         robotID, "velocity", joint_indices, targetVelocities=twist_0
     )
 
-    xd_control_sig=x_0_sol[1]
-    yd_control_sig=y_0_sol[1]
-    thd_control_sig=th_0_sol[1]
-    vd_control_sig=v_0_sol[1]
-    wd_control_sig=w_0_sol[1]
-
     q_log = []
     q_dot_log = []
     predicted_pos_log = []
@@ -476,19 +470,15 @@ def mpc_run():
         if cnt!=0:
             print("loop time: %f [ms]"%(1000*(loop_time)))
         start = time.time()
-        # q_now = obj.readJointPositions(robotID, joint_indices)
-        # dq_now = obj.readJointVelocities(robotID, joint_indices)
-        q_now = [xd_control_sig, yd_control_sig, thd_control_sig]
-        dq_now = [vd_control_sig, wd_control_sig]
+        q_now = obj.readJointPositions(robotID, joint_indices)
+        dq_now = obj.readJointVelocities(robotID, joint_indices)
 
         # initialize values
         MPC_component.input_ports["port_inp_x00"]["val"] = q_now[0]
         MPC_component.input_ports["port_inp_y00"]["val"] = q_now[1]
         MPC_component.input_ports["port_inp_th00"]["val"] = q_now[2]
-        MPC_component.input_ports["port_inp_v00"]["val"] = dq_now[0]
-        MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[1]
-        # MPC_component.input_ports["port_inp_v00"]["val"] = np.sqrt(dq_now[0]**2+dq_now[1]**2)
-        # MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[2]
+        MPC_component.input_ports["port_inp_v00"]["val"] = np.sqrt(dq_now[0]**2+dq_now[1]**2)
+        MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[2]
 
         # Find closest point on the reference path compared witch current position
         index_closest_point = find_closest_point(q_now[:2], ref_path, index_closest_point)
@@ -509,7 +499,7 @@ def mpc_run():
 
         MPC_component.input_ports["port_inp_waypoints"]["val"] = cs.vec(current_waypoints[:,:-1]) # Input must be 'list'
         MPC_component.input_ports["port_inp_waypoint_last"]["val"] = cs.vec(current_waypoints[:,-1]) # Input must be 'list'
-        print("comp time = %f[ms]"%(1000*(time.time()-start)))
+
         if cnt == 0:
             MPC_component.configMPC()
 
@@ -539,7 +529,7 @@ def mpc_run():
 
         q_log.append(q_now)
         q_dot_log.append(dq_now)
-        
+        print("comp time = %f[ms]"%(1000*(time.time()-start)))
         # Set control signal to the simulated robot
         xd_control_sig = MPC_component.output_ports["port_out_x0"]["val"].full()
         yd_control_sig = MPC_component.output_ports["port_out_y0"]["val"].full()
@@ -548,14 +538,15 @@ def mpc_run():
         wd_control_sig = MPC_component.output_ports["port_out_w0"]["val"].full()
         dvd_control_sig = (MPC_component.output_ports["port_out_dv0"]["val"] * t_mpc).full()
         dwd_control_sig = (MPC_component.output_ports["port_out_dw0"]["val"] * t_mpc).full()
-        twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
+        # twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
+        twist_d = [(vd_control_sig)*np.cos(thd_control_sig), (vd_control_sig)*np.sin(thd_control_sig),wd_control_sig]
         # print(twist_d)
-        # obj.setController(
-        #     robotID, "velocity", joint_indices, targetVelocities=twist_d
-        # )
+        obj.setController(
+            robotID, "velocity", joint_indices, targetVelocities=twist_d
+        )
         print("v: ", vd_control_sig, ", w: ", wd_control_sig)
         # Simulate
-        # obj.run_simulation(no_samples)
+        obj.run_simulation(no_samples)
         end=time.time()
         
         # Termination criteria

@@ -49,12 +49,12 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = False
+obstacle_avoidance = True
 command_activate = False
 
 
@@ -148,11 +148,11 @@ def cmd_run():
 
         if _global_flag['OCP_Solved'] == True:
             
-            xd_itp_new = _qd['xd_itp']
-            yd_itp_new = _qd['yd_itp']
-            thd_itp_new = _qd['thd_itp']
-            vd_itp_new = _qd['vd_itp']
-            wd_itp_new = _qd['wd_itp']
+            xd_itp_new = _qd['xd_itp'][1:]
+            yd_itp_new = _qd['yd_itp'][1:]
+            thd_itp_new = _qd['thd_itp'][1:]
+            vd_itp_new = _qd['vd_itp'][1:]
+            wd_itp_new = _qd['wd_itp'][1:]
 
             _global_flag['OCP_Solved'] = False
 
@@ -173,14 +173,14 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
             base_msg.angular.z = wd_itp_new.pop(0)
-            print(base_msg)
+            # print(base_msg)
 
         pub.publish(base_msg)
 
@@ -204,8 +204,8 @@ def mpc_run():
     # Update robot's parameters if needed
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
-    max_task_acc = cs.DM([1, 1*pi])
-    max_task_jerk = cs.DM([10,10*pi])
+    max_task_acc = cs.DM([3, 3*pi])
+    max_task_jerk = cs.DM([20,20*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
     robot.set_task_jerk_limits(lb=-max_task_jerk, ub=max_task_jerk)
@@ -235,26 +235,27 @@ def mpc_run():
         obs_p = tc.create_parameter('obs_p', (2,1), stage=0)
         # obs_p = tc.create_parameter('obs_p', (2,1), stage=0, grid='control')
         obs_r = 1
-        obs_con = {'inequality':True, 'hard':False, 'expression':np.sqrt(cs.sumsqr(p[0:2]-obs_p)), 'lower_limits':obs_r, 'norm':'L1', 'gain':switch*1e0}
+        obs_con = {'inequality':True, 'hard':False, 'expression':np.sqrt(cs.sumsqr(p[0:2]-obs_p)), 'lower_limits':obs_r, 'norm':'L1', 'gain':switch*1e2}
         tc.add_task_constraint({"path_constraints":[obs_con]}, stage = 0)
 
     # Regularization
-    tc.add_regularization(expression = v_0, weight = 1e0, stage = 0)
-    tc.add_regularization(expression = w_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = v_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = w_0, weight = 1e-1, stage = 0)
 
-    tc.add_regularization(expression = dv_0, weight = 1e0, stage = 0)
-    tc.add_regularization(expression = dw_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = dv_0, weight = 4e-1, stage = 0)
+    tc.add_regularization(expression = dw_0, weight = 4e-1, stage = 0)
 
-    tc.add_regularization(expression = ddv_0, weight = 1e0, stage = 0)
-    tc.add_regularization(expression = ddw_0, weight = 1e0, stage = 0)
+    tc.add_regularization(expression = ddv_0, weight = 1e-1, stage = 0)
+    tc.add_regularization(expression = ddw_0, weight = 1e-1, stage = 0)
 
     # Path_constraint
-    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
-    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
-    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
+    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':2e1, 'norm':'L2'}
+    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':2e1, 'norm':'L2'}
+    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':2e1, 'norm':'L2'}
     tc.add_task_constraint({"path_constraints":[path_pos1, path_pos2, path_pos3]}, stage = 0)
 
-    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e1, 'norm':'L2'}
+    # fina
+    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':2e1, 'norm':'L2'}
     tc.add_task_constraint({"final_constraints":[final_pos]}, stage = 0)
 
     ################################################
@@ -550,7 +551,8 @@ def mpc_run():
         wd_control_sig = MPC_component.output_ports["port_out_w0"]["val"].full()
         dvd_control_sig = (MPC_component.output_ports["port_out_dv0"]["val"] * t_mpc).full()
         dwd_control_sig = (MPC_component.output_ports["port_out_dw0"]["val"] * t_mpc).full()
-        twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
+        # twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
+        twist_d = [(vd_control_sig)*np.cos(thd_control_sig), (vd_control_sig)*np.sin(thd_control_sig),wd_control_sig]
         # print(twist_d)
         obj.setController(
             robotID, "velocity", joint_indices, targetVelocities=twist_d
