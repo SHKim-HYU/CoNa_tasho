@@ -50,19 +50,18 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = False
-command_activate = True
+obstacle_avoidance = True
+command_activate = False
 
 
 # Select prediction horizon and sample time for the MPC execution
 horizon_samples = 25
 t_mpc = 0.2 #in seconds
-duration = t_mpc*horizon_samples
 # horizon_samples = 75
 # t_mpc = 1/15
 
@@ -78,7 +77,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
-_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0; _q['t']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
 _qd['xd_itp']=[0.0]*horizon_samples
@@ -158,9 +157,17 @@ def cmd_run():
             t_itp = np.linspace(0,duration, num=horizon_samples, endpoint=True)
             t_itp_new = np.linspace(0,duration, num=int(base_frq*t_mpc)*(horizon_samples), endpoint=True)
 
+            x_f = interp1d(t_itp, _qd['xd_itp'], kind='cubic')
+            y_f = interp1d(t_itp, _qd['yd_itp'], kind='cubic')
+            th_f = interp1d(t_itp, _qd['thd_itp'], kind='cubic')
+
             v_f = interp1d(t_itp, _qd['vd_itp'], kind='cubic')
             w_f = interp1d(t_itp, _qd['wd_itp'], kind='cubic')
 
+            xd_itp_new = list(x_f(t_itp_new))
+            yd_itp_new = list(y_f(t_itp_new))
+            thd_itp_new = list(th_f(t_itp_new))
+            
             vd_itp_new = list(v_f(t_itp_new))
             wd_itp_new = list(w_f(t_itp_new))
             # xd_itp_new = _qd['xd_itp']
@@ -170,7 +177,7 @@ def cmd_run():
             # wd_itp_new = _qd['wd_itp']
             mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
-                        _qd['dv'], _qd['dw']]
+                         _q['x'],_q['y'],_q['th']]
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
@@ -195,13 +202,15 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0] + vd_itp_new.pop(0)
+            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
             base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
         
