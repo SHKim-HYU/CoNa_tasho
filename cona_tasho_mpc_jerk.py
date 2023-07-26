@@ -62,8 +62,8 @@ command_activate = True
 
 
 # Select prediction horizon and sample time for the MPC execution
-horizon_samples = 50
-t_mpc = 0.1 #in seconds
+horizon_samples = 25
+t_mpc = 0.2 #in seconds
 duration = t_mpc*horizon_samples
 
 #############################################################################
@@ -155,7 +155,7 @@ def cmd_run():
     vd_itp_new = []; wd_itp_new = []; 
     # dvd_itp_new = []; dwd_itp_new = [];
     mpc_res.data = [0.0]*9
-    Kp_mob = [0.1, 0.1, 0.1]
+    Kp_mob = [1, 1, 1]
     Kd_mob = [0.7, 0.7, 0.7]
 
     while not rospy.is_shutdown():
@@ -217,7 +217,7 @@ def cmd_run():
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
         
@@ -321,7 +321,7 @@ def mpc_run():
     # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     # ref_path['theta'] = theta_path + [theta_path[-1]]
 
-    pathpoints = 200
+    pathpoints = 100
     ref_path = {}
     ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5

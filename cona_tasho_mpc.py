@@ -50,18 +50,19 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = True
-env_enable = True
-frame_enable = True
+gui_enable = False
+env_enable = False
+frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = True
-command_activate = False
+obstacle_avoidance = False
+command_activate = True
 
 
 # Select prediction horizon and sample time for the MPC execution
-horizon_samples = 50
-t_mpc = 0.1 #in seconds
+horizon_samples = 25
+t_mpc = 0.2 #in seconds
+duration = t_mpc*horizon_samples
 # horizon_samples = 75
 # t_mpc = 1/15
 
@@ -77,7 +78,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
-_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0; _q['t']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
 _qd['xd_itp']=[0.0]*horizon_samples
@@ -168,7 +169,7 @@ def cmd_run():
             # wd_itp_new = _qd['wd_itp']
             mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
-                        _qd['dv'], _qd['dw']]
+                        _q['x'],_q['y'],_q['th']]
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
@@ -291,7 +292,7 @@ def mpc_run():
     # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     # ref_path['theta'] = theta_path + [theta_path[-1]]
 
-    pathpoints = 200
+    pathpoints = 100
     ref_path = {}
     ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
     ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
