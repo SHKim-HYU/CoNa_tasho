@@ -216,12 +216,14 @@ def cmd_run():
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
             base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
             base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
         
