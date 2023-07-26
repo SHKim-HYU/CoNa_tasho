@@ -109,7 +109,7 @@ def base_twist_CB(data):
 
         # compensate odom offset
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
-        quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(quaternion),tf.transformations.quaternion_from_euler(0,0,_q['th0']))
+        quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(tf.transformations.quaternion_from_euler(0,0,_q['th0'])),quaternion)
         _q['th'] = tf.transformations.euler_from_quaternion(quat_err)[2]
         _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
         _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
