@@ -207,7 +207,9 @@ def cmd_run():
         else:
             x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
             y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
-            th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
+            quat=tf.transformations.quaternion_from_euler(0,0,thd_itp_new.pop(0))
+            quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(_q['th']),quat)
+            th=Kp_mob[2]*(tf.transformations.euler_from_quaternion(quat_err)[2])
             
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
@@ -218,7 +220,7 @@ def cmd_run():
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = wd_itp_new.pop(0)
+            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # print(base_msg)
 
         
