@@ -57,7 +57,7 @@ frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
-command_activate = False
+command_activate = True
 
 
 
@@ -155,7 +155,7 @@ def cmd_run():
     vd_itp_new = []; wd_itp_new = []; 
     # dvd_itp_new = []; dwd_itp_new = [];
     mpc_res.data = [0.0]*9
-    Kp_mob = [1, 1, 1]
+    Kp_mob = [0.1, 0.1, 0.1]
     Kd_mob = [0.7, 0.7, 0.7]
 
     while not rospy.is_shutdown():
@@ -166,9 +166,17 @@ def cmd_run():
             
             t_itp = np.linspace(0,duration, num=horizon_samples, endpoint=True)
             t_itp_new = np.linspace(0,duration, num=int(base_frq*t_mpc)*(horizon_samples), endpoint=True)
+            
+            x_f = interp1d(t_itp, _qd['xd_itp'], kind='cubic')
+            y_f = interp1d(t_itp, _qd['yd_itp'], kind='cubic')
+            th_f = interp1d(t_itp, _qd['thd_itp'], kind='cubic')
 
             v_f = interp1d(t_itp, _qd['vd_itp'], kind='cubic')
             w_f = interp1d(t_itp, _qd['wd_itp'], kind='cubic')
+            
+            xd_itp_new = list(x_f(t_itp_new))
+            yd_itp_new = list(y_f(t_itp_new))
+            thd_itp_new = list(th_f(t_itp_new))
 
             vd_itp_new = list(v_f(t_itp_new))
             wd_itp_new = list(w_f(t_itp_new))
@@ -196,20 +204,20 @@ def cmd_run():
             base_msg.angular.y = 0
             base_msg.angular.z = 0
         else:
-            # x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
-            # y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
-            # th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
+            x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
+            y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
+            th=Kp_mob[2]*(thd_itp_new.pop(0)-_q['th'])
             
-            # J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
-            # v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
+            J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
+            v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = vd_itp_new.pop(0)
+            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = wd_itp_new.pop(0)
+            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # print(base_msg)
 
         
