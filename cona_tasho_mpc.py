@@ -50,19 +50,18 @@ from nav_msgs.msg import Odometry
 #############################################
 ################## Options ##################
 #############################################
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
-obstacle_avoidance = False
-command_activate = True
+obstacle_avoidance = True
+command_activate = False
 
 
 # Select prediction horizon and sample time for the MPC execution
 horizon_samples = 25
 t_mpc = 0.2 #in seconds
-duration = t_mpc*horizon_samples
 # horizon_samples = 75
 # t_mpc = 1/15
 
@@ -78,7 +77,7 @@ _global_flag = manager.dict()
 _task_flag = manager.dict()
 
 _q['x']=0.0; _q['y']=0.0; _q['th']=0.0; _q['v']=0.0; _q['w']=0.0;
-_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0; _q['t']=0.0;
+_q['x0']=0.0; _q['y0']=0.0; _q['th0']=0.0;
 _qd['x']=0.0; _qd['y']=0.0; _qd['th']=0.0; _qd['v']=0.0; _qd['w']=0.0; _qd['dv']=0.0; _qd['dw']=0.0; 
 
 _qd['xd_itp']=[0.0]*horizon_samples
@@ -110,7 +109,8 @@ def base_twist_CB(data):
 
         # compensate odom offset
         quaternion = (data.pose.pose.orientation.x, data.pose.pose.orientation.y, data.pose.pose.orientation.z, data.pose.pose.orientation.w)
-        _q['th'] = tf.transformations.euler_from_quaternion(quaternion)[2] - _q['th0']
+        quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(quaternion),tf.transformations.quaternion_from_euler(0,0,_q['th0']))
+        _q['th'] = tf.transformations.euler_from_quaternion(quat_err)[2]
         _q['x'] = (data.pose.pose.position.x-_q['x0'])*cs.cos(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.sin(_q['th0'])
         _q['y'] = -(data.pose.pose.position.x-_q['x0'])*cs.sin(_q['th0']) + (data.pose.pose.position.y-_q['y0'])*cs.cos(_q['th0'])
         
@@ -169,7 +169,7 @@ def cmd_run():
             # wd_itp_new = _qd['wd_itp']
             mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
-                        _q['x'],_q['y'],_q['th']]
+                        _qd['dv'], _qd['dw']]
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
@@ -238,7 +238,7 @@ def mpc_run():
     x_0, y_0, th_0, v_0, w_0, dv_0, dw_0, x0_0, y0_0, th0_0, v0_0, w0_0 = WMR(robot,tc, options={'nonholonomic':True, 'acceleration':True})
 
     # Minimal time
-    tc.minimize_time(10, 0)
+    # tc.minimize_time(10, 0)
 
     # Define physical path parameter
     waypoints = tc.create_parameter('waypoints', (3,1), stage=0, grid='control')
