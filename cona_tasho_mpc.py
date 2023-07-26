@@ -186,8 +186,9 @@ def cmd_run():
         else:
             =Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
             y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
-            quat=tf.transformations.quaternion_from_euler(0,0,thd_itp_new.pop(0))
-            quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(_q['th']),quat)
+            quat_d=tf.transformations.quaternion_from_euler(0,0,thd_itp_new.pop(0))
+            quat = tf.transformations.quaternion_from_euler(0,0,_q['th'])
+            quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(quat),quat_d)
             th=Kp_mob[2]*(tf.transformations.euler_from_quaternion(quat_err)[2])
             
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
