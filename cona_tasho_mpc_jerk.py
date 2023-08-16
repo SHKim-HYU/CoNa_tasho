@@ -53,7 +53,7 @@ from nav_msgs.msg import Odometry
 
 gui_enable = True
 env_enable = True
-frame_enable = False
+frame_enable = True
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
@@ -347,17 +347,37 @@ def mpc_run():
     # ref_path['y'] = np.linspace(0,0, pathpoints+1)
     # ref_path['theta'] = np.linspace(0,0, pathpoints+1)
 
-    # Box
-    viapoints = 30
+    # # Box
+    # viapoints = 30
+    # dist_box = 2
+    # pathpoints = (viapoints+1)*3
+    # ref_path = {}
+    # a=np.linspace(0,dist_box, viapoints+1); b=np.linspace(dist_box,0, viapoints+1);
+    # e_0=np.linspace(0,0,viapoints+1);e_b=np.linspace(dist_box,dist_box,viapoints+1);
+    # a_r=np.linspace(pi/2,pi/2,viapoints+1);b_r=np.linspace(pi,pi,viapoints+1);
+    # ref_path['x'] = np.concatenate((a,np.concatenate((e_b,b))))
+    # ref_path['y'] = np.concatenate((e_0,np.concatenate((a,e_b))))
+    # ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
+
+    # Box2
+    viapoints = 15
     dist_box = 2
-    pathpoints = (viapoints+1)*3
+    pathpoints = (viapoints+1)*6
     ref_path = {}
-    a=np.linspace(0,dist_box, viapoints+1); b=np.linspace(dist_box,0, viapoints+1);
-    e_0=np.linspace(0,0,viapoints+1);e_b=np.linspace(dist_box,dist_box,viapoints+1);
+    a=np.linspace(0,dist_box/2, viapoints+1); b=np.linspace(dist_box/2,dist_box, viapoints+1);
+    c=np.linspace(dist_box,dist_box/2, viapoints+1); d=np.linspace(dist_box/2,0, viapoints+1);
+    e_0=np.linspace(0,0,viapoints+1);e_m=np.linspace(dist_box/2,dist_box/2,viapoints+1);e_b=np.linspace(dist_box,dist_box,viapoints+1);
     a_r=np.linspace(pi/2,pi/2,viapoints+1);b_r=np.linspace(pi,pi,viapoints+1);
-    ref_path['x'] = np.concatenate((a,np.concatenate((e_b,b))))
-    ref_path['y'] = np.concatenate((e_0,np.concatenate((a,e_b))))
-    ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
+
+    am=np.concatenate((a,e_m)); ea=np.concatenate((e_0,a));
+    bm=np.concatenate((b,e_b)); mb=np.concatenate((e_m,b)); 
+    cd=np.concatenate((c,d)); bb=np.concatenate((e_b,e_b)); 
+    ear=np.concatenate((e_0,a_r)); br=np.concatenate((b_r,b_r))
+
+
+    ref_path['x'] = np.concatenate((am,np.concatenate((bm,cd))))
+    ref_path['y'] = np.concatenate((ea,np.concatenate((mb,bb))))
+    ref_path['theta'] = np.concatenate((ear,np.concatenate((ear,br))))
 
     if obstacle_avoidance==True:
         ref_obs = {}
