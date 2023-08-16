@@ -51,8 +51,8 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = False
-env_enable = False
+gui_enable = True
+env_enable = True
 frame_enable = False
 HSL = False
 time_optimal = False
@@ -138,7 +138,7 @@ def cmd_run():
     rospy.init_node('cona_mpc', anonymous=True)
 
     if command_activate == True:
-        pub = rospy.Publisher('/planner/cmd_vel', Twist, queue_size=1000)
+        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     else:
         pub = rospy.Publisher('/cmd_virtual', Twist, queue_size=10)
 
@@ -348,14 +348,15 @@ def mpc_run():
     # ref_path['theta'] = np.linspace(0,0, pathpoints+1)
 
     # Box
-    viapoints = 25
+    viapoints = 30
+    dist_box = 2
     pathpoints = (viapoints+1)*3
     ref_path = {}
-    a=np.linspace(0,1, viapoints+1); b=np.linspace(1,0, viapoints+1);
-    e_0=np.linspace(0,0,viapoints+1);e_1=np.linspace(1,1,viapoints+1);
+    a=np.linspace(0,dist_box, viapoints+1); b=np.linspace(dist_box,0, viapoints+1);
+    e_0=np.linspace(0,0,viapoints+1);e_b=np.linspace(dist_box,dist_box,viapoints+1);
     a_r=np.linspace(pi/2,pi/2,viapoints+1);b_r=np.linspace(pi,pi,viapoints+1);
-    ref_path['x'] = np.concatenate((a,np.concatenate((e_1,b))))
-    ref_path['y'] = np.concatenate((e_0,np.concatenate((a,e_1))))
+    ref_path['x'] = np.concatenate((a,np.concatenate((e_b,b))))
+    ref_path['y'] = np.concatenate((e_0,np.concatenate((a,e_b))))
     ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
 
     if obstacle_avoidance==True:
