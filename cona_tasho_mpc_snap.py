@@ -53,7 +53,7 @@ from nav_msgs.msg import Odometry
 
 gui_enable = True
 env_enable = True
-frame_enable = True
+frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
@@ -86,6 +86,8 @@ _qd['yd_itp']=[0.0]*horizon_samples
 _qd['thd_itp']=[0.0]*horizon_samples
 _qd['vd_itp']=[0.0]*horizon_samples
 _qd['wd_itp']=[0.0]*horizon_samples
+_qd['dvd_itp']=[0.0]*horizon_samples
+_qd['dwd_itp']=[0.0]*horizon_samples
 
 _global_flag['MPC_Fail'] = False; _global_flag['OCP_Solved'] = False; _global_flag['Interpolated'] = False;
 _global_flag['initial_data'] = False; _global_flag['isArrived'] = False; _global_flag['base_flag'] = False; 
@@ -154,10 +156,13 @@ def cmd_run():
 
     xd_itp_new = []; yd_itp_new = []; thd_itp_new=[];
     vd_itp_new = []; wd_itp_new = []; 
-    # dvd_itp_new = []; dwd_itp_new = [];
+    dvd_itp_new = []; dwd_itp_new = []; 
+
+    u_prev = [0.0]*2
+
     mpc_res.data = [0.0]*9
-    Kp_mob = [0.5, 0.5, 0.5]
-    Kd_mob = [0.1, 0.1]
+    Ki_mob = [0.5, 0.5, 0.5]
+    Kp_mob = [0.1, 0.1]
 
     while not rospy.is_shutdown():
 
@@ -175,12 +180,19 @@ def cmd_run():
             v_f = interp1d(t_itp, _qd['vd_itp'], kind='cubic')
             w_f = interp1d(t_itp, _qd['wd_itp'], kind='cubic')
             
+            dv_f = interp1d(t_itp, _qd['dvd_itp'], kind='cubic')
+            dw_f = interp1d(t_itp, _qd['dwd_itp'], kind='cubic')
+
             xd_itp_new = list(x_f(t_itp_new))
             yd_itp_new = list(y_f(t_itp_new))
             thd_itp_new = list(th_f(t_itp_new))
 
             vd_itp_new = list(v_f(t_itp_new))
             wd_itp_new = list(w_f(t_itp_new))
+
+            dvd_itp_new = list(dv_f(t_itp_new))
+            dwd_itp_new = list(dw_f(t_itp_new))
+
             # xd_itp_new = _qd['xd_itp']
             # yd_itp_new = _qd['yd_itp']
             # thd_itp_new = _qd['thd_itp']
@@ -207,27 +219,31 @@ def cmd_run():
             base_msg.angular.y = 0
             base_msg.angular.z = 0
         else:
-            x=Kp_mob[0]*(xd_itp_new.pop(0)-_q['x'])
-            y=Kp_mob[1]*(yd_itp_new.pop(0)-_q['y'])
+            x=Ki_mob[0]*(xd_itp_new.pop(0)-_q['x'])
+            y=Ki_mob[1]*(yd_itp_new.pop(0)-_q['y'])
             quat_d=tf.transformations.quaternion_from_euler(0,0,thd_itp_new.pop(0))
             quat = tf.transformations.quaternion_from_euler(0,0,_q['th'])
             quat_err = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(quat),quat_d)
-            th=Kp_mob[2]*(tf.transformations.euler_from_quaternion(quat_err)[2])
+            th=Ki_mob[2]*(tf.transformations.euler_from_quaternion(quat_err)[2])
             
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
             vd = vd_itp_new.pop(0)
-            base_msg.linear.x = vd + v[0] + Kd_mob[0]*(vd-_q['v'])
+            dvd = dvd_itp_new.pop(0)
+            base_msg.linear.x = u_prev[0] + (dvd + v[0] + Kp_mob[0]*(vd-_q['v']))/base_frq
+            # base_msg.linear.x = vd + v[0] + Kd_mob[0]*(vd-_q['v'])
             # base_msg.linear.x = v[0] + vd_itp_new.pop(0)
             # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
             wd = wd_itp_new.pop(0)
+            dwd = dwd_itp_new.pop(0)
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = wd + v[1] + Kd_mob[1]*(wd-_q['w'])
+            base_msg.angular.z = u_prev[1] + (dwd + v[1] + Kp_mob[1]*(wd-_q['w']))/base_frq
+            # base_msg.angular.z = wd + v[1] + Kd_mob[1]*(wd-_q['w'])
             # base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
@@ -256,8 +272,8 @@ def mpc_run():
     # Update robot's parameters if needed
     max_task_vel_ub = cs.DM([1.2, pi/6])
     max_task_vel_lb = cs.DM([0, -pi/6])
-    max_task_acc = cs.DM([3, 3*pi])
-    max_task_jerk = cs.DM([20,20*pi])
+    max_task_acc = cs.DM([10, 10*pi])
+    max_task_jerk = cs.DM([80,80*pi])
     max_task_snap = cs.DM([1000,1000*pi])
     robot.set_task_velocity_limits(lb=max_task_vel_lb, ub=max_task_vel_ub)
     robot.set_task_acceleration_limits(lb=-max_task_acc, ub=max_task_acc)
@@ -306,13 +322,13 @@ def mpc_run():
     tc.add_regularization(expression = sw_0, weight = 1e-1, stage = 0)
 
     # Path_constraint
-    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
-    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
-    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
+    path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e2, 'norm':'L2'}
+    path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e2, 'norm':'L2'}
+    path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e2, 'norm':'L2'}
     tc.add_task_constraint({"path_constraints":[path_pos1, path_pos2, path_pos3]}, stage = 0)
 
     # fina
-    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e1, 'norm':'L2'}
+    final_pos = {'hard':False, 'expression':p, 'reference':waypoint_last, 'gain':4e2, 'norm':'L2'}
     tc.add_task_constraint({"final_constraints":[final_pos]}, stage = 0)
 
     ################################################
@@ -369,7 +385,7 @@ def mpc_run():
     # ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
 
     # Box2
-    viapoints = 15
+    viapoints = 10
     dist_box = 2
     pathpoints = (viapoints+1)*6
     ref_path = {}
@@ -603,6 +619,8 @@ def mpc_run():
             _qd['thd_itp']=th_0_sol[1:]
             _qd['vd_itp']=np.zeros(horizon_samples)
             _qd['wd_itp']=np.zeros(horizon_samples)
+            _qd['dvd_itp']=np.zeros(horizon_samples)
+            _qd['dwd_itp']=np.zeros(horizon_samples)
 
             _global_flag['OCP_Solved'] = True
 
@@ -613,6 +631,8 @@ def mpc_run():
             _qd['thd_itp']=th_0_sol[1:]
             _qd['vd_itp']=v_0_sol[1:]
             _qd['wd_itp']=w_0_sol[1:]
+            _qd['dvd_itp']=dv_0_sol[1:]
+            _qd['dwd_itp']=dw_0_sol[1:]
 
             _global_flag['OCP_Solved'] = True
 
@@ -703,6 +723,8 @@ def mpc_run():
             _qd['thd_itp']=th_pred
             _qd['vd_itp']=v_pred
             _qd['wd_itp']=w_pred
+            _qd['dvd_itp']=dv_pred
+            _qd['dwd_itp']=dw_pred
             _global_flag['OCP_Solved'] = True
 
             # Set control signal to the simulated robot
