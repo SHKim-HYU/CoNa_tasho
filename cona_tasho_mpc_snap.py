@@ -51,13 +51,13 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = True
-env_enable = True
+gui_enable = False
+env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
-command_activate = False
+command_activate = True
 
 
 
@@ -161,8 +161,11 @@ def cmd_run():
     u_prev = [0.0]*2
 
     mpc_res.data = [0.0]*9
-    Ki_mob = [0.5, 0.5, 0.5]
-    Kp_mob = [0.1, 0.1]
+    #Kp_mob = [1, 1]
+    #Ki_mob = [Kp_mob[0]**2/4, Kp_mob[0]**2/4, Kp_mob[0]**2/4]
+    
+    Kp_mob = [0.1,0.1]
+    Ki_mob = [0.5,0.5,0.5]
 
     while not rospy.is_shutdown():
 
@@ -231,9 +234,9 @@ def cmd_run():
             
             vd = vd_itp_new.pop(0)
             dvd = dvd_itp_new.pop(0)
-            base_msg.linear.x = u_prev[0] + (dvd + v[0] + Kp_mob[0]*(vd-_q['v']))/base_frq
-            # base_msg.linear.x = vd + v[0] + Kd_mob[0]*(vd-_q['v'])
-            # base_msg.linear.x = v[0] + vd_itp_new.pop(0)
+            #base_msg.linear.x = u_prev[0] + (dvd + v[0] + Kp_mob[0]*(vd-_q['v']))/base_frq
+            #base_msg.linear.x = vd + v[0] + Kp_mob[0]*(vd-_q['v'])
+            base_msg.linear.x = v[0] + vd_itp_new.pop(0)
             # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
@@ -242,13 +245,13 @@ def cmd_run():
             dwd = dwd_itp_new.pop(0)
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = u_prev[1] + (dwd + v[1] + Kp_mob[1]*(wd-_q['w']))/base_frq
-            # base_msg.angular.z = wd + v[1] + Kd_mob[1]*(wd-_q['w'])
-            # base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            #base_msg.angular.z = u_prev[1] + (dwd + v[1] + Kp_mob[1]*(wd-_q['w']))/base_frq
+            #base_msg.angular.z = wd + v[1] + Kp_mob[1]*(wd-_q['w'])
+            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
-        
+        u_prev=[base_msg.linear.x, base_msg.angular.z]
         pub.publish(base_msg)
 
         rate.sleep()
@@ -385,7 +388,7 @@ def mpc_run():
     # ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
 
     # Box2
-    viapoints = 10
+    viapoints = 15
     dist_box = 2
     pathpoints = (viapoints+1)*6
     ref_path = {}
