@@ -51,8 +51,8 @@ from nav_msgs.msg import Odometry
 ################## Options ##################
 #############################################
 
-gui_enable = True
-env_enable = True
+gui_enable = False
+env_enable = False
 frame_enable = False
 HSL = False
 time_optimal = False
@@ -156,8 +156,8 @@ def cmd_run():
     vd_itp_new = []; wd_itp_new = []; 
     # dvd_itp_new = []; dwd_itp_new = [];
     mpc_res.data = [0.0]*9
-    Kp_mob = [1, 1, 1]
-    Kd_mob = [0.7, 0.7, 0.7]
+    Kp_mob = [0.5, 0.5, 0.5]
+    Kd_mob = [0.1, 0.1]
 
     while not rospy.is_shutdown():
 
@@ -192,6 +192,7 @@ def cmd_run():
                         _qd['ddv'], _qd['ddw'],
                         _qd['sv'], _qd['sw']]
                         # _q['x'],_q['y'],_q['th']]
+
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
@@ -216,14 +217,18 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            vd = vd_itp_new.pop(0)
+            base_msg.linear.x = vd + v[0] + Kd_mob[0]*(vd-_q['v'])
+            # base_msg.linear.x = v[0] + vd_itp_new.pop(0)
             # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
+            wd = wd_itp_new.pop(0)
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            base_msg.angular.z = wd + v[1] + Kd_mob[1]*(wd-_q['w'])
+            # base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
@@ -271,7 +276,7 @@ def mpc_run():
     x_0, y_0, th_0, v_0, w_0, dv_0, dw_0, ddv_0, ddw_0, sv_0, sw_0, x0_0, y0_0, th0_0, v0_0, w0_0, dv0_0, dw0_0, ddv0_0, ddw0_0 = WMR(robot,tc, options={'nonholonomic':True, 'snap':True})
 
     # Minimal time
-    tc.minimize_time(10, 0)
+    # tc.minimize_time(10, 0)
 
     # Define physical path parameter
     waypoints = tc.create_parameter('waypoints', (3,1), stage=0, grid='control')
@@ -511,6 +516,8 @@ def mpc_run():
     t_sol, dw_0_sol     = tc.sol_sample(dw_0, grid="control",     stage = 0)
     t_sol, ddv_0_sol = tc.sol_sample(ddv_0, grid="control", stage = 0)
     t_sol, ddw_0_sol     = tc.sol_sample(ddw_0, grid="control",     stage = 0)
+    t_sol, sv_0_sol = tc.sol_sample(sv_0, grid="control", stage = 0)
+    t_sol, sw_0_sol     = tc.sol_sample(sw_0, grid="control",     stage = 0)
 
     obj.resetJointState(robotID,joint_indices,q0_val)
     if frame_enable==True:
@@ -555,123 +562,149 @@ def mpc_run():
     while True:
         init_time=time.time()
         print("----------- MPC execution -----------")
-        if cnt!=0:
+        if cnt==0:
+            # initial guess control input
+            _qd['xd_itp']=x_0_sol[1:]
+            _qd['yd_itp']=y_0_sol[1:]
+            _qd['thd_itp']=th_0_sol[1:]
+            _qd['vd_itp']=np.zeros(horizon_samples)
+            _qd['wd_itp']=np.zeros(horizon_samples)
+
+            _global_flag['OCP_Solved'] = True
+
+        elif cnt==1:
+            # initial guess control input
+            _qd['xd_itp']=x_0_sol[1:]
+            _qd['yd_itp']=y_0_sol[1:]
+            _qd['thd_itp']=th_0_sol[1:]
+            _qd['vd_itp']=v_0_sol[1:]
+            _qd['wd_itp']=w_0_sol[1:]
+
+            _global_flag['OCP_Solved'] = True
+
+            _qd['x']=x_0_sol[0]; _qd['y']=y_0_sol[0]; _qd['th']=th_0_sol[0];
+            _qd['v']=v_0_sol[0]; _qd['w']=w_0_sol[0]; 
+            _qd['dv']=dv_0_sol[0]; _qd['dw']=dw_0_sol[0];
+            _qd['ddv']=ddv_0_sol[0]; _qd['ddw']=ddw_0_sol[0];
+            _qd['sv']=sv_0_sol[0]; _qd['sw']=sw_0_sol[0];
+
+        else:
             print("loop time: %f [ms]"%(1000*(loop_time)))
-        start = time.time()
-        # q_now = obj.readJointPositions(robotID, joint_indices)
-        # dq_now = obj.readJointVelocities(robotID, joint_indices)
+            start = time.time()
+            # q_now = obj.readJointPositions(robotID, joint_indices)
+            # dq_now = obj.readJointVelocities(robotID, joint_indices)
 
-        # initialize values
-        # MPC_component.input_ports["port_inp_x00"]["val"] = q_now[0]
-        # MPC_component.input_ports["port_inp_y00"]["val"] = q_now[1]
-        # MPC_component.input_ports["port_inp_th00"]["val"] = q_now[2]
-        # MPC_component.input_ports["port_inp_v00"]["val"] = np.sqrt(dq_now[0]**2+dq_now[1]**2)
-        # MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[2]
-        # MPC_component.input_ports["port_inp_dv00"]["val"] = dvd_control_sig
-        # MPC_component.input_ports["port_inp_dw00"]["val"] = dwd_control_sig
+            # initialize values
+            # MPC_component.input_ports["port_inp_x00"]["val"] = q_now[0]
+            # MPC_component.input_ports["port_inp_y00"]["val"] = q_now[1]
+            # MPC_component.input_ports["port_inp_th00"]["val"] = q_now[2]
+            # MPC_component.input_ports["port_inp_v00"]["val"] = np.sqrt(dq_now[0]**2+dq_now[1]**2)
+            # MPC_component.input_ports["port_inp_w00"]["val"] = dq_now[2]
+            # MPC_component.input_ports["port_inp_dv00"]["val"] = dvd_control_sig
+            # MPC_component.input_ports["port_inp_dw00"]["val"] = dwd_control_sig
 
-        MPC_component.input_ports["port_inp_x00"]["val"] = _qd['x']
-        MPC_component.input_ports["port_inp_y00"]["val"] = _qd['y']
-        MPC_component.input_ports["port_inp_th00"]["val"] = _qd['th']
-        MPC_component.input_ports["port_inp_v00"]["val"] = _qd['v']
-        MPC_component.input_ports["port_inp_w00"]["val"] = _qd['w']
-        MPC_component.input_ports["port_inp_dv00"]["val"] = _qd['dv']
-        MPC_component.input_ports["port_inp_dw00"]["val"] = _qd['dw']
-        MPC_component.input_ports["port_inp_ddv00"]["val"] = _qd['ddv']
-        MPC_component.input_ports["port_inp_ddw00"]["val"] = _qd['ddw']
+            MPC_component.input_ports["port_inp_x00"]["val"] = _qd['x']
+            MPC_component.input_ports["port_inp_y00"]["val"] = _qd['y']
+            MPC_component.input_ports["port_inp_th00"]["val"] = _qd['th']
+            MPC_component.input_ports["port_inp_v00"]["val"] = _qd['v']
+            MPC_component.input_ports["port_inp_w00"]["val"] = _qd['w']
+            MPC_component.input_ports["port_inp_dv00"]["val"] = _qd['dv']
+            MPC_component.input_ports["port_inp_dw00"]["val"] = _qd['dw']
+            MPC_component.input_ports["port_inp_ddv00"]["val"] = _qd['ddv']
+            MPC_component.input_ports["port_inp_ddw00"]["val"] = _qd['ddw']
 
-        # Find closest point on the reference path compared witch current position
-        # index_closest_point = find_closest_point(q_now[:2], ref_path, index_closest_point)
-        index_closest_point = find_closest_point([_qd['x'],_qd['y']], ref_path, index_closest_point)
+            # Find closest point on the reference path compared witch current position
+            # index_closest_point = find_closest_point(q_now[:2], ref_path, index_closest_point)
+            index_closest_point = find_closest_point([_qd['x'],_qd['y']], ref_path, index_closest_point)
 
-        # Create a list of N waypoints
-        current_waypoints = get_current_waypoints(index_closest_point, wp, horizon_samples, dist=5)
+            # Create a list of N waypoints
+            current_waypoints = get_current_waypoints(index_closest_point, wp, horizon_samples, dist=5)
 
-        if obstacle_avoidance==True:
-            # Set initial switch value for obstacle avoidance
-            # dist_obs, closest_obs = find_closest_obstacle(q_now[:2], ref_obs)
-            dist_obs, closest_obs = find_closest_obstacle([_qd['x'],_qd['y']], ref_obs)
-            MPC_component.input_ports["port_inp_obs_p"]["val"] = [ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]]
-            if dist_obs>=5:
-                print("dist_obs: ", dist_obs, "switch: ",0, "idx_obs: ",closest_obs)
-                MPC_component.input_ports["port_inp_switch"]["val"] = 0
-            else:
-                print("dist_obs: ", dist_obs, "switch: ",1, "idx_obs: ",closest_obs)
-                MPC_component.input_ports["port_inp_switch"]["val"] = 1
+            if obstacle_avoidance==True:
+                # Set initial switch value for obstacle avoidance
+                # dist_obs, closest_obs = find_closest_obstacle(q_now[:2], ref_obs)
+                dist_obs, closest_obs = find_closest_obstacle([_qd['x'],_qd['y']], ref_obs)
+                MPC_component.input_ports["port_inp_obs_p"]["val"] = [ref_obs['x'][closest_obs],ref_obs['y'][closest_obs]]
+                if dist_obs>=5:
+                    print("dist_obs: ", dist_obs, "switch: ",0, "idx_obs: ",closest_obs)
+                    MPC_component.input_ports["port_inp_switch"]["val"] = 0
+                else:
+                    print("dist_obs: ", dist_obs, "switch: ",1, "idx_obs: ",closest_obs)
+                    MPC_component.input_ports["port_inp_switch"]["val"] = 1
 
-        MPC_component.input_ports["port_inp_waypoints"]["val"] = cs.vec(current_waypoints[:,:-1]) # Input must be 'list'
-        MPC_component.input_ports["port_inp_waypoint_last"]["val"] = cs.vec(current_waypoints[:,-1]) # Input must be 'list'
+            MPC_component.input_ports["port_inp_waypoints"]["val"] = cs.vec(current_waypoints[:,:-1]) # Input must be 'list'
+            MPC_component.input_ports["port_inp_waypoint_last"]["val"] = cs.vec(current_waypoints[:,-1]) # Input must be 'list'
 
-        if cnt == 0:
-            MPC_component.configMPC()
+            if cnt == 0:
+                MPC_component.configMPC()
 
-        MPC_component.runMPC()
+            MPC_component.runMPC()
 
-        sol = MPC_component.res_vals
-        for i in range(horizon_samples):
-            # 1st eliment: current value, 2nd~horizon: predicted value
-            x_pred[i]=sol[i+1].full()[0][0]
-            y_pred[i]=sol[(horizon_samples+1)+i+1].full()[0][0]
-            th_pred[i]=sol[2*(horizon_samples+1)+i+1].full()[0][0]
+            sol = MPC_component.res_vals
+            for i in range(horizon_samples):
+                # 1st eliment: current value, 2nd~horizon: predicted value
+                x_pred[i]=sol[i+1].full()[0][0]
+                y_pred[i]=sol[(horizon_samples+1)+i+1].full()[0][0]
+                th_pred[i]=sol[2*(horizon_samples+1)+i+1].full()[0][0]
 
-            v_pred[i]=sol[3*(horizon_samples+1)+i+1].full()[0][0]
-            w_pred[i]=sol[4*(horizon_samples+1)+i+1].full()[0][0]
+                v_pred[i]=sol[3*(horizon_samples+1)+i+1].full()[0][0]
+                w_pred[i]=sol[4*(horizon_samples+1)+i+1].full()[0][0]
 
-            dv_pred[i]=sol[5*(horizon_samples+1)+i+1].full()[0][0]
-            dw_pred[i]=sol[6*(horizon_samples+1)+i+1].full()[0][0]
+                dv_pred[i]=sol[5*(horizon_samples+1)+i+1].full()[0][0]
+                dw_pred[i]=sol[6*(horizon_samples+1)+i+1].full()[0][0]
 
-            ddv_pred[i]=sol[7*(horizon_samples+1)+i].full()[0][0]
-            ddw_pred[i]=sol[8*(horizon_samples+1)+i].full()[0][0]
+                ddv_pred[i]=sol[7*(horizon_samples+1)+i+1].full()[0][0]
+                ddw_pred[i]=sol[8*(horizon_samples+1)+i+1].full()[0][0]
 
-            sv_pred[i]=sol[9*(horizon_samples+1)+i].full()[0][0]
-            sw_pred[i]=sol[10*(horizon_samples+1)+i].full()[0][0]
+                sv_pred[i]=sol[9*(horizon_samples+1)+i].full()[0][0]
+                sw_pred[i]=sol[10*(horizon_samples+1)+i].full()[0][0]
 
-            q_pred[i] = [x_pred[i], y_pred[i], th_pred[i]]
+                q_pred[i] = [x_pred[i], y_pred[i], th_pred[i]]
 
-        if frame_enable==True:
-            obj.resetMultiJointState(frameIDs, joint_indices, q_pred)
+            if frame_enable==True:
+                obj.resetMultiJointState(frameIDs, joint_indices, q_pred)
 
-        _qd['xd_itp']=x_pred
-        _qd['yd_itp']=y_pred
-        _qd['thd_itp']=th_pred
-        _qd['vd_itp']=v_pred
-        _qd['wd_itp']=w_pred
-        _global_flag['OCP_Solved'] = True
+            _qd['xd_itp']=x_pred
+            _qd['yd_itp']=y_pred
+            _qd['thd_itp']=th_pred
+            _qd['vd_itp']=v_pred
+            _qd['wd_itp']=w_pred
+            _global_flag['OCP_Solved'] = True
 
-        # Set control signal to the simulated robot
-        xd_control_sig = MPC_component.output_ports["port_out_x0"]["val"].full()
-        yd_control_sig = MPC_component.output_ports["port_out_y0"]["val"].full()
-        thd_control_sig = MPC_component.output_ports["port_out_th0"]["val"].full()
-        vd_control_sig = MPC_component.output_ports["port_out_v0"]["val"].full()
-        wd_control_sig = MPC_component.output_ports["port_out_w0"]["val"].full()
-        dvd_control_sig = (MPC_component.output_ports["port_out_dv0"]["val"]).full()
-        dwd_control_sig = (MPC_component.output_ports["port_out_dw0"]["val"]).full()
-        ddvd_control_sig = (MPC_component.output_ports["port_out_ddv0"]["val"]).full()
-        ddwd_control_sig = (MPC_component.output_ports["port_out_ddw0"]["val"]).full()
-        svd_control_sig = (MPC_component.output_ports["port_out_sv0"]["val"]).full()
-        swd_control_sig = (MPC_component.output_ports["port_out_sw0"]["val"]).full()
+            # Set control signal to the simulated robot
+            xd_control_sig = MPC_component.output_ports["port_out_x0"]["val"].full()
+            yd_control_sig = MPC_component.output_ports["port_out_y0"]["val"].full()
+            thd_control_sig = MPC_component.output_ports["port_out_th0"]["val"].full()
+            vd_control_sig = MPC_component.output_ports["port_out_v0"]["val"].full()
+            wd_control_sig = MPC_component.output_ports["port_out_w0"]["val"].full()
+            dvd_control_sig = (MPC_component.output_ports["port_out_dv0"]["val"]).full()
+            dwd_control_sig = (MPC_component.output_ports["port_out_dw0"]["val"]).full()
+            ddvd_control_sig = (MPC_component.output_ports["port_out_ddv0"]["val"]).full()
+            ddwd_control_sig = (MPC_component.output_ports["port_out_ddw0"]["val"]).full()
+            svd_control_sig = (MPC_component.output_ports["port_out_sv0"]["val"]).full()
+            swd_control_sig = (MPC_component.output_ports["port_out_sw0"]["val"]).full()
 
-        _qd['x']=x_pred[0]; _qd['y']=y_pred[0]; _qd['th']=th_pred[0];
-        _qd['v']=v_pred[0]; _qd['w']=w_pred[0]; 
-        _qd['dv']=dv_pred[0]; _qd['dw']=dw_pred[0];
-        _qd['ddv']=ddv_pred[0]; _qd['ddw']=ddw_pred[0];
-        _qd['sv']=sv_pred[0]; _qd['sw']=sw_pred[0];
-        # twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
-        # twist_d = [(vd_control_sig)*np.cos(thd_control_sig), (vd_control_sig)*np.sin(thd_control_sig),wd_control_sig]
-        twist_d = [v_pred[0]*np.cos(th_pred[0]), v_pred[0]*np.sin(th_pred[0]), w_pred[0]]
-        # print(twist_d)
-        obj.setController(
-            robotID, "velocity", joint_indices, targetVelocities=twist_d
-        )
-        # print("v: ", vd_control_sig, ", w: ", wd_control_sig)
-        print("v: ", v_pred[0], ", w: ", w_pred[0])
-        # Simulate
-        obj.run_simulation(no_samples)
-        end=time.time()
-        
-        # Termination criteria
-        # if "termination_criteria_true" in MPC_component.event_output_port:
-        #     break
+            _qd['x']=x_pred[0]; _qd['y']=y_pred[0]; _qd['th']=th_pred[0];
+            _qd['v']=v_pred[0]; _qd['w']=w_pred[0]; 
+            _qd['dv']=dv_pred[0]; _qd['dw']=dw_pred[0];
+            _qd['ddv']=ddv_pred[0]; _qd['ddw']=ddw_pred[0];
+            _qd['sv']=sv_pred[0]; _qd['sw']=sw_pred[0];
+            # twist_d = [(vd_control_sig+dvd_control_sig)*np.cos(thd_control_sig), (vd_control_sig+dvd_control_sig)*np.sin(thd_control_sig),wd_control_sig+dwd_control_sig]
+            # twist_d = [(vd_control_sig)*np.cos(thd_control_sig), (vd_control_sig)*np.sin(thd_control_sig),wd_control_sig]
+            twist_d = [v_pred[0]*np.cos(th_pred[0]), v_pred[0]*np.sin(th_pred[0]), w_pred[0]]
+            # print(twist_d)
+            obj.setController(
+                robotID, "velocity", joint_indices, targetVelocities=twist_d
+            )
+            # print("v: ", vd_control_sig, ", w: ", wd_control_sig)
+            print("v: ", v_pred[0], ", w: ", w_pred[0])
+            # Simulate
+            obj.run_simulation(no_samples)
+            end=time.time()
+            
+            # Termination criteria
+            # if "termination_criteria_true" in MPC_component.event_output_port:
+            #     break
 
         cnt+=1
         

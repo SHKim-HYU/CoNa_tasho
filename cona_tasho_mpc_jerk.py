@@ -156,8 +156,8 @@ def cmd_run():
     vd_itp_new = []; wd_itp_new = []; 
     # dvd_itp_new = []; dwd_itp_new = [];
     mpc_res.data = [0.0]*9
-    Kp_mob = [1, 1, 1]
-    Kd_mob = [0.7, 0.7, 0.7]
+    Kp_mob = [0.5, 0.5, 0.5]
+    Kd_mob = [0.1, 0.1]
 
     while not rospy.is_shutdown():
 
@@ -215,14 +215,18 @@ def cmd_run():
             J=np.array([[0,1],[cs.cos(_q['th']),0],[cs.sin(_q['th']),0]])
             v=np.linalg.pinv(J)@[th,x,y] # v=[v,w]' 
             
-            base_msg.linear.x = v[0]+vd_itp_new.pop(0)
+            vd = vd_itp_new.pop(0)
+            base_msg.linear.x = vd + v[0] + Kd_mob[0]*(vd-_q['v'])
+            # base_msg.linear.x = v[0] + vd_itp_new.pop(0)
             # base_msg.linear.x = vd_itp_new.pop(0)
             base_msg.linear.y = 0
             base_msg.linear.z = 0
 
+            wd = wd_itp_new.pop(0)
             base_msg.angular.x = 0
             base_msg.angular.y = 0
-            base_msg.angular.z = v[1]+wd_itp_new.pop(0)
+            base_msg.angular.z = wd + v[1] + Kd_mob[1]*(wd-_q['w'])
+            # base_msg.angular.z = v[1]+wd_itp_new.pop(0)
             # base_msg.angular.z = wd_itp_new.pop(0)
             # print(base_msg)
 
@@ -267,7 +271,7 @@ def mpc_run():
     x_0, y_0, th_0, v_0, w_0, dv_0, dw_0, ddv_0, ddw_0, x0_0, y0_0, th0_0, v0_0, w0_0, dv0_0, dw0_0 = WMR(robot,tc, options={'nonholonomic':True, 'jerk':True})
 
     # Minimal time
-    tc.minimize_time(10, 0)
+    # tc.minimize_time(10, 0)
 
     # Define physical path parameter
     waypoints = tc.create_parameter('waypoints', (3,1), stage=0, grid='control')
@@ -294,6 +298,7 @@ def mpc_run():
     tc.add_regularization(expression = ddw_0, weight = 1e0, stage = 0)
 
     # Path_constraint
+    # path_vel = {'hard':False, 'expression':v_0, 'reference':1, 'gain':5e0,'norm':'L2'}
     path_pos1 = {'hard':False, 'expression':x_0, 'reference':waypoints[0], 'gain':4e1, 'norm':'L2'}
     path_pos2 = {'hard':False, 'expression':y_0, 'reference':waypoints[1], 'gain':4e1, 'norm':'L2'}
     path_pos3 = {'hard':False, 'expression':th_0, 'reference':waypoints[2], 'gain':4e1, 'norm':'L2'}
