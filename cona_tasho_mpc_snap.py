@@ -57,7 +57,7 @@ frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False
-command_activate = True
+command_activate = False
 
 
 
@@ -333,7 +333,7 @@ def mpc_run():
     tc.set_initial(sv_0, 0, stage=0)
     tc.set_initial(sw_0, 0, stage=0)
 
-    # Define reference path
+    # # Define reference path
     # pathpoints = 300
     # ref_path = {}
     # ref_path['x'] = 1.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
@@ -341,18 +341,31 @@ def mpc_run():
     # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
     # ref_path['theta'] = theta_path + [theta_path[-1]]
 
-    pathpoints = 100
-    ref_path = {}
-    ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
-    ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
-    theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
-    ref_path['theta'] = theta_path + [theta_path[-1]]
-
-    # pathpoints = 200
+    # # Corridor
+    # pathpoints = 100
     # ref_path = {}
-    # ref_path['x'] = np.linspace(0,0, pathpoints+1)
-    # ref_path['y'] = np.linspace(0,10, pathpoints+1)
-    # ref_path['theta'] = np.linspace(pi/2,pi/2, pathpoints+1)
+    # ref_path['x'] = 0.5*np.sin(np.linspace(0,4*np.pi, pathpoints+1))
+    # ref_path['y'] = np.linspace(0,2, pathpoints+1)**2*2.5
+    # theta_path = [cs.arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)] 
+    # ref_path['theta'] = theta_path + [theta_path[-1]]
+
+    # # Straight line
+    # pathpoints = 20
+    # ref_path = {}
+    # ref_path['x'] = np.linspace(0,1, pathpoints+1)
+    # ref_path['y'] = np.linspace(0,0, pathpoints+1)
+    # ref_path['theta'] = np.linspace(0,0, pathpoints+1)
+
+    # Box
+    viapoints = 25
+    pathpoints = (viapoints+1)*3
+    ref_path = {}
+    a=np.linspace(0,1, viapoints+1); b=np.linspace(1,0, viapoints+1);
+    e_0=np.linspace(0,0,viapoints+1);e_1=np.linspace(1,1,viapoints+1);
+    a_r=np.linspace(pi/2,pi/2,viapoints+1);b_r=np.linspace(pi,pi,viapoints+1);
+    ref_path['x'] = np.concatenate((a,np.concatenate((e_1,b))))
+    ref_path['y'] = np.concatenate((e_0,np.concatenate((a,e_1))))
+    ref_path['theta'] = np.concatenate((e_0,np.concatenate((a_r,b_r))))
 
     if obstacle_avoidance==True:
         ref_obs = {}
