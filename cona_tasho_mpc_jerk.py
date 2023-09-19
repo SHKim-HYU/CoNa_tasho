@@ -150,7 +150,7 @@ def cmd_run():
 
     mpc_res = Float64MultiArray()
     base_msg = Twist()
-    base_frq = 15
+    base_frq = 50
     
     rate = rospy.Rate(base_frq)
 
@@ -200,9 +200,10 @@ def cmd_run():
             # wd_itp_new = _qd['wd_itp']
             mpc_res.data = [_q['t'],_qd['x'], _qd['y'], _qd['th'],
                         _qd['v'], _qd['w'],
-                        #_q['x'],_q['y'],_q['th']]
-                        _qd['dv'], _qd['dw'],
-                        _qd['ddv'], _qd['ddw']]
+                        _q['x'],_q['y'],_q['th'],
+                        _qd['dv'], _qd['dw']]
+                        #_qd['ddv'], _qd['ddw'],
+                        #_qd['sv'], _qd['sw']]
             # mpc_res.data = [_q['t']]
             mpc_pub.publish(mpc_res)
             _global_flag['OCP_Solved'] = False
