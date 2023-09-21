@@ -41,7 +41,7 @@ public:
         if (data.isMember(key)) {
             return data[key];
         }
-        return Json::Value(); // Return null value if the key doesn't exist.
+        return Json::Value(); 
     }
 };
 
