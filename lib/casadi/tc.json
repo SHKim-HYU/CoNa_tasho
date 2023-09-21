@@ -1,0 +1,326 @@
+{
+    "x0": {
+        "start": 0,
+        "size": 1,
+        "jump": 1,
+        "end": 26
+    },
+    "y0": {
+        "start": 26,
+        "size": 1,
+        "jump": 1,
+        "end": 52
+    },
+    "th0": {
+        "start": 52,
+        "size": 1,
+        "jump": 1,
+        "end": 78
+    },
+    "v0": {
+        "start": 78,
+        "size": 1,
+        "jump": 1,
+        "end": 104
+    },
+    "w0": {
+        "start": 104,
+        "size": 1,
+        "jump": 1,
+        "end": 130
+    },
+    "dv0": {
+        "start": 130,
+        "size": 1,
+        "jump": 1,
+        "end": 156
+    },
+    "dw0": {
+        "start": 156,
+        "size": 1,
+        "jump": 1,
+        "end": 182
+    },
+    "ddv0": {
+        "start": 182,
+        "size": 1,
+        "jump": 1,
+        "end": 208
+    },
+    "ddw0": {
+        "start": 208,
+        "size": 1,
+        "jump": 1,
+        "end": 234
+    },
+    "sv0": {
+        "start": 234,
+        "size": 1,
+        "jump": 1,
+        "end": 259
+    },
+    "sw0": {
+        "start": 259,
+        "size": 1,
+        "jump": 1,
+        "end": 284
+    },
+    "x00": {
+        "start": 284,
+        "size": 1,
+        "jump": 1,
+        "end": 285
+    },
+    "y00": {
+        "start": 285,
+        "size": 1,
+        "jump": 1,
+        "end": 286
+    },
+    "th00": {
+        "start": 286,
+        "size": 1,
+        "jump": 1,
+        "end": 287
+    },
+    "v00": {
+        "start": 287,
+        "size": 1,
+        "jump": 1,
+        "end": 288
+    },
+    "w00": {
+        "start": 288,
+        "size": 1,
+        "jump": 1,
+        "end": 289
+    },
+    "dv00": {
+        "start": 289,
+        "size": 1,
+        "jump": 1,
+        "end": 290
+    },
+    "dw00": {
+        "start": 290,
+        "size": 1,
+        "jump": 1,
+        "end": 291
+    },
+    "ddv00": {
+        "start": 291,
+        "size": 1,
+        "jump": 1,
+        "end": 292
+    },
+    "ddw00": {
+        "start": 292,
+        "size": 1,
+        "jump": 1,
+        "end": 293
+    },
+    "waypoints": {
+        "start": 293,
+        "size": 3,
+        "jump": 3,
+        "end": 368
+    },
+    "waypoint_last": {
+        "start": 368,
+        "size": 3,
+        "jump": 3,
+        "end": 371
+    },
+    "lam_g": {
+        "start": 371,
+        "size": 443,
+        "end": 814
+    },
+    "time_grid_stage_0": {
+        "start": 814,
+        "end": 840,
+        "size": 26
+    },
+    "monitor_names": [
+        "termination_criteria"
+    ],
+    "monitor_locations": {
+        "termination_criteria": 840
+    },
+    "mpc_fun_name": "tc_mpc",
+    "mpc_file": "../casadi_dir/tc_mpc.casadi",
+    "pred_file": "../casadi_dir/tc_pred.casadi",
+    "pred_fun_name": "F",
+    "num_inp_ports": 11,
+    "num_out_ports": 11,
+    "num_props": 0,
+    "num_states": 9,
+    "num_controls": 2,
+    "num_parameters": 11,
+    "states": [
+        "x0",
+        "y0",
+        "th0",
+        "v0",
+        "w0",
+        "dv0",
+        "dw0",
+        "ddv0",
+        "ddw0"
+    ],
+    "controls": [
+        "sv0",
+        "sw0"
+    ],
+    "parameters": [
+        "x00",
+        "y00",
+        "th00",
+        "v00",
+        "w00",
+        "dv00",
+        "dw00",
+        "ddv00",
+        "ddw00",
+        "waypoints",
+        "waypoint_last"
+    ],
+    "inp_ports": [
+        {
+            "name": "port_inp_x00",
+            "var": "x00",
+            "desc": "[default] Read values for parameter x00",
+            "warm_start": 1,
+            "wvar": "x0"
+        },
+        {
+            "name": "port_inp_y00",
+            "var": "y00",
+            "desc": "[default] Read values for parameter y00",
+            "warm_start": 1,
+            "wvar": "y0"
+        },
+        {
+            "name": "port_inp_th00",
+            "var": "th00",
+            "desc": "[default] Read values for parameter th00",
+            "warm_start": 1,
+            "wvar": "th0"
+        },
+        {
+            "name": "port_inp_v00",
+            "var": "v00",
+            "desc": "[default] Read values for parameter v00",
+            "warm_start": 1,
+            "wvar": "v0"
+        },
+        {
+            "name": "port_inp_w00",
+            "var": "w00",
+            "desc": "[default] Read values for parameter w00",
+            "warm_start": 1,
+            "wvar": "w0"
+        },
+        {
+            "name": "port_inp_dv00",
+            "var": "dv00",
+            "desc": "[default] Read values for parameter dv00",
+            "warm_start": 1,
+            "wvar": "dv0"
+        },
+        {
+            "name": "port_inp_dw00",
+            "var": "dw00",
+            "desc": "[default] Read values for parameter dw00",
+            "warm_start": 1,
+            "wvar": "dw0"
+        },
+        {
+            "name": "port_inp_ddv00",
+            "var": "ddv00",
+            "desc": "[default] Read values for parameter ddv00",
+            "warm_start": 1,
+            "wvar": "ddv0"
+        },
+        {
+            "name": "port_inp_ddw00",
+            "var": "ddw00",
+            "desc": "[default] Read values for parameter ddw00",
+            "warm_start": 1,
+            "wvar": "ddw0"
+        },
+        {
+            "name": "port_inp_waypoints",
+            "var": "waypoints",
+            "grid": "control",
+            "desc": "[default] Read values for parameter waypoints"
+        },
+        {
+            "name": "port_inp_waypoint_last",
+            "var": "waypoint_last",
+            "desc": "[default] Read values for parameter waypoint_last"
+        }
+    ],
+    "out_ports": [
+        {
+            "name": "port_out_sv0",
+            "var": "sv0",
+            "desc": "[default] write values for control sv0"
+        },
+        {
+            "name": "port_out_sw0",
+            "var": "sw0",
+            "desc": "[default] write values for control sw0"
+        },
+        {
+            "name": "port_out_x0",
+            "var": "x0",
+            "desc": "output port for the task position x"
+        },
+        {
+            "name": "port_out_y0",
+            "var": "y0",
+            "desc": "output port for the task position x"
+        },
+        {
+            "name": "port_out_th0",
+            "var": "th0",
+            "desc": "output port for the task position th"
+        },
+        {
+            "name": "port_out_v0",
+            "var": "v0",
+            "desc": "output port for the task linear velocities"
+        },
+        {
+            "name": "port_out_w0",
+            "var": "w0",
+            "desc": "output port for the task angular velocities"
+        },
+        {
+            "name": "port_out_dv0",
+            "var": "dv0",
+            "desc": "output port for the task linear acceleration"
+        },
+        {
+            "name": "port_out_dw0",
+            "var": "dw0",
+            "desc": "output port for the task angular acceleration"
+        },
+        {
+            "name": "port_out_ddv0",
+            "var": "ddv0",
+            "desc": "output port for the task linear acceleration"
+        },
+        {
+            "name": "port_out_ddw0",
+            "var": "ddw0",
+            "desc": "output port for the task angular acceleration"
+        }
+    ],
+    "props": [],
+    "horizon": 25,
+    "sampling_time": 0.2,
+    "ocp_fun_name": "tc_ocp",
+    "ocp_file": "../casadi_dir/tc_ocp.casadi"
+}

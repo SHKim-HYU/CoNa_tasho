@@ -486,12 +486,12 @@ def mpc_run():
     sol = tc.solve_ocp()
 
     # Generate the controller component
-    dir_casadi_func = "casadi_dir"
-    os.makedirs("../"+dir_casadi_func, exist_ok=True)
+    dir_casadi_func = "casadi"
+    os.makedirs("../lib/"+dir_casadi_func, exist_ok=True)
     cg_opts={"ocp_cg_opts":{"save":True, "codegen":False, "jit":False}, "mpc":True, "mpc_cg_opts":{"save":True, "codegen":False, "jit":False}}
-    vars_db = tc.generate_MPC_component("../"+dir_casadi_func+"/", cg_opts)
+    vars_db = tc.generate_MPC_component("../lib/"+dir_casadi_func+"/", cg_opts)
 
-    MPC_component = MPC("mir250_path_following", "../"+dir_casadi_func+"/"+ tc.name + ".json")
+    MPC_component = MPC("mir250_path_following", "../lib/"+dir_casadi_func+"/"+ tc.name + ".json")
 
     start = time.time()
     # Begin the visualization by applying the initial control signal
