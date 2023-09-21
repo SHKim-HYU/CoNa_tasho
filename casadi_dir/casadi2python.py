@@ -7,7 +7,7 @@ casadi function to python example
 # casadi2python.py
 # Sunhong Kim
 # tjsghd101@naver.com
-# Sep. 19. 2023
+# Sep. 21. 2023
 ##################
 """
 
@@ -33,9 +33,10 @@ u=[0.0]*2;  # Control input
 T=0.0; 		# 
 t0=0.25; 	# initial time
 p=[0.0]*15  # initial parameters
+z0=[0.0]
 tc_pred=cs.Function.load('tc_pred.casadi')
 
 # xf: , Xi: , poly_coeff: Coefficient matrix from RK4 to reconstruct 4th order polynomial (k1,k2,k3,k4),
 # qf: , zf: , Zi: , poly_coeff_z: 
-xf, Xi, poly_coeff, qf, zf, Zi, poly_coeff_z = tc_pred(x0,u,T,t0,p)
+xf, Xi, poly_coeff, qf, zf, Zi, poly_coeff_z = tc_pred(x0,u,T,t0,p,z0)
 print("Pred Result: ", xf, Xi, poly_coeff, qf, zf, Zi, poly_coeff_z)

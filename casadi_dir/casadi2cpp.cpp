@@ -2,7 +2,7 @@
  *  @file casadi2codegen.cpp
  *  @brief Example code for casadi function
  *  @author Sunhong Kim (tjsghd101@naver.com)
- *  @data Sep. 18. 2023
+ *  @data Sep. 21. 2023
  *  @Comm
  */
 
@@ -60,6 +60,7 @@ int main() {
     double T = 0.0;   // 
     double t0 = 0.02; // initial_time
     std::vector<double> p(15, 0.0); // Size of arg, initial value
+    double z0 = 0.0;
 
     // Prepare input as DM objects
     casadi::DM dm_x0 = casadi::DM(x0);
@@ -67,6 +68,7 @@ int main() {
     casadi::DM dm_T = casadi::DM(T);
     casadi::DM dm_t0 = casadi::DM(t0);
     casadi::DM dm_p = casadi::DM(p);
+    casadi::DM dm_z0 = casadi::DM(z0);
 
     // Prepare the input dictionary
     std::map<std::string, casadi::DM> arg;
@@ -75,6 +77,7 @@ int main() {
     arg["T"] = dm_T;
     arg["t0"] = dm_t0;
     arg["p"] = dm_p;
+    arg["z0"] = dm_z0;
 
     // Call the function
     std::map<std::string, casadi::DM> res = tc_pred(arg);
