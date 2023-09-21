@@ -53,7 +53,7 @@ from nav_msgs.msg import Odometry
 
 gui_enable = True
 env_enable = True
-frame_enable = True
+frame_enable = False
 HSL = False
 time_optimal = False
 obstacle_avoidance = False

@@ -12,6 +12,7 @@ casadi function to python example
 """
 
 import casadi as cs
+import time
 
 
 i0=[0.0]*814 # Serialized inputs: please refer to .json file
@@ -28,7 +29,10 @@ i0=[0.0]*814 # Serialized inputs: please refer to .json file
 print("MPC Input Size: ", len(i0))
 tc_mpc=cs.Function.load('../lib/casadi/tc_mpc.casadi')
 print(tc_mpc)
+start_time = time.process_time()
 mpc_res = tc_mpc(i0)
+end_time = time.process_time()
+print("MPC function time: ", (end_time - start_time) * 1000, "ms")
 print("MPC Output Size: ", mpc_res.size())
 print("MPC Result: ", mpc_res)
 

@@ -11,6 +11,8 @@
 
 #include <casadi/casadi.hpp>
 #include <iostream>
+#include <chrono>
+using namespace std::chrono;
 
 int main() {
 
@@ -46,7 +48,11 @@ int main() {
 
     // Evaluate CasADi Function
     std::vector<casadi::DM> mpc_arg = {mpc_i0};
+    system_clock::time_point StartTime = system_clock::now();
     std::vector<casadi::DM> mpc_res = tc_mpc(mpc_arg);
+    system_clock::time_point EndTime = system_clock::now();
+    milliseconds mill = duration_cast<milliseconds>(EndTime - StartTime);
+    std::cout << "MPC function time: " << mill.count() << "ms" << std::endl;
 
     // results.
     casadi::DM mpc_o0 = mpc_res[0];

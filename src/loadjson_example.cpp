@@ -6,7 +6,7 @@
  *  @Comm
  */
 
-// g++ loadjson_example.cpp -I/usr/include/jsoncpp -ljsoncpp -o output_executable
+// g++ loadjson_example.cpp -I/usr/include/jsoncpp -ljsoncpp -o ../bin/loadjson_example
 
 #include <iostream>
 #include <fstream>

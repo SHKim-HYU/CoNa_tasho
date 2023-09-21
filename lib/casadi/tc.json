@@ -148,8 +148,8 @@
         "termination_criteria": 840
     },
     "mpc_fun_name": "tc_mpc",
-    "mpc_file": "../casadi_dir/tc_mpc.casadi",
-    "pred_file": "../casadi_dir/tc_pred.casadi",
+    "mpc_file": "../lib/casadi/tc_mpc.casadi",
+    "pred_file": "../lib/casadi/tc_pred.casadi",
     "pred_fun_name": "F",
     "num_inp_ports": 11,
     "num_out_ports": 11,
@@ -322,5 +322,5 @@
     "horizon": 25,
     "sampling_time": 0.2,
     "ocp_fun_name": "tc_ocp",
-    "ocp_file": "../casadi_dir/tc_ocp.casadi"
+    "ocp_file": "../lib/casadi/tc_ocp.casadi"
 }
