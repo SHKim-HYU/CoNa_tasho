@@ -11,42 +11,17 @@
 #include <iostream>
 #include <fstream>
 #include <json/json.h>
+#include "json_loader.h"
 
-class JsonLoader {
-private:
-    Json::Value data;
+#ifndef CASADI_RESOURCE_PATH
+#define CASADI_RESOURCE_PATH ""
+#endif
 
-public:
-    // Constructor: Takes the path of the JSON file as an argument.
-    JsonLoader(const std::string &filePath) {
-        std::ifstream input_file(filePath);
-        if (!input_file.is_open()) {
-            std::cerr << "Failed to open JSON file." << std::endl;
-            return;
-        }
-
-        Json::CharReaderBuilder rbuilder;
-        std::string errs;
-        bool parsingSuccessful = Json::parseFromStream(rbuilder, input_file, &data, &errs);
-        if (!parsingSuccessful) {
-            std::cerr << "Failed to parse JSON: " << errs << std::endl;
-            return;
-        }
-
-        input_file.close();
-    }
-
-    // Function to fetch the value corresponding to a specific key in the JSON object.
-    Json::Value getValue(const std::string &key) const {
-        if (data.isMember(key)) {
-            return data[key];
-        }
-        return Json::Value(); 
-    }
-};
 
 int main() {
-    JsonLoader loader("../lib/casadi/tc.json");
+    std::string json_file_path = CASADI_RESOURCE_PATH;
+    json_file_path += "tc.json";
+    JsonLoader loader(json_file_path);
 
     // Fetch and print the value for the key "x0".
     Json::Value x0 = loader.getValue("x0");

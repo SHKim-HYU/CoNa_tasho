@@ -14,11 +14,18 @@
 #include <chrono>
 using namespace std::chrono;
 
+#ifndef CASADI_RESOURCE_PATH
+#define CASADI_RESOURCE_PATH ""
+#endif
+
+
 int main() {
 
     // //// 1. OCP: Initial guess
     // // CasADi Function Load.
-    // casadi::Function tc_ocp = casadi::Function::load("../lib/casadi/tc_ocp.casadi");
+    // std::string ocp_file_path = CASADI_RESOURCE_PATH;
+    // ocp_file_path += "tc_ocp.casadi";
+    // casadi::Function tc_ocp = casadi::Function::load(ocp_file_path);
     // std::cout << "tc_ocp: " << tc_ocp << std::endl;
 
     // // Input Setting..
@@ -39,7 +46,9 @@ int main() {
 
     //// 2. MPC: MPC function in online loop
     // CasADi Function Load.
-    casadi::Function tc_mpc = casadi::Function::load("../lib/casadi/tc_mpc.casadi");
+    std::string mpc_file_path = CASADI_RESOURCE_PATH;
+    mpc_file_path += "tc_mpc.casadi";
+    casadi::Function tc_mpc = casadi::Function::load(mpc_file_path);
     std::cout << "tc_mpc: " << tc_mpc << std::endl;
 
     // Input Setting..
@@ -64,7 +73,9 @@ int main() {
 
     // //// 3. Pred: Simulate the system by one step and shift the states and control vectors to warmstart the MPC
     // // CasADi Function Load.
-    // casadi::Function tc_pred = casadi::Function::load("../lib/casadi/tc_pred.casadi");
+    // std::string pred_file_path = CASADI_RESOURCE_PATH;
+    // pred_file_path += "tc_pred.casadi";
+    // casadi::Function tc_pred = casadi::Function::load(pred_file_path);
     // std::cout << "tc_pred: " << tc_pred << std::endl;
 
     // // Input data

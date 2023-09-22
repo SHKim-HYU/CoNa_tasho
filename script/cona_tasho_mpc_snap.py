@@ -498,7 +498,7 @@ def mpc_run():
     os.makedirs("../lib/"+dir_casadi_func, exist_ok=True)
     cg_opts={"ocp_cg_opts":{"save":True, "codegen":False, "jit":False}, "mpc":True, "mpc_cg_opts":{"save":True, "codegen":False, "jit":False}}
     vars_db = tc.generate_MPC_component("../lib/"+dir_casadi_func+"/", cg_opts)
-
+    print("../lib/"+dir_casadi_func+"/"+ tc.name + ".json")
     MPC_component = MPC("mir250_path_following", "../lib/"+dir_casadi_func+"/"+ tc.name + ".json")
 
     ################################################

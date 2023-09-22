@@ -4,6 +4,13 @@
 #include <ros/ros.h>
 #include <casadi/casadi.hpp>
 #include "json_loader.h"
+#include <iostream>
+#include <chrono>
+using namespace std::chrono;
+
+#ifndef CASADI_RESOURCE_PATH
+#define CASADI_RESOURCE_PATH ""
+#endif
 
 class MPCNode {
 private:
@@ -12,6 +19,8 @@ private:
     casadi::Function tc_ocp_;
     casadi::Function tc_pred_;
     JsonLoader loader_;
+
+    std::string json_path;
 
     void mpcLoop();
 
