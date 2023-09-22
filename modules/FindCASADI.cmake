@@ -1,12 +1,12 @@
-find_path(CASADI_INCLUDE_DIR
+find_path(CASADI_INCLUDE_DIRS
   casadi/casadi.hpp
   HINTS $ENV{CASADI_PREFIX}/include $ENV{CASADI_INSTALL_INCLUDE}
 )
 
 if(CASADI_INCLUDE_DIR)
-  set(CASADI_INCLUDE_DIR ${CASADI_INCLUDE_DIR} ${CASADI_INCLUDE_DIR}/casadi)
+  set(CASADI_INCLUDE_DIRS ${CASADI_INCLUDE_DIR} ${CASADI_INCLUDE_DIR}/casadi)
   set(CASADI_FOUND_INCLUDE TRUE)
-  message(STATUS "Found CasADi include dir: ${CASADI_INCLUDE_DIR}")
+  message(STATUS "Found CasADi include dir: ${CASADI_INCLUDE_DIRS}")
 else()
   message(STATUS "Could not find CasADi include dir")
 endif()

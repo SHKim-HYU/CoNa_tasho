@@ -35,7 +35,7 @@ void MPCNode::mpcLoop() {
 }
 
 void MPCNode::run() {
-    ros::Rate loop_rate(5);  // 100Hz
+    ros::Rate loop_rate(50);  // 100Hz
 
     while (ros::ok()) {
         system_clock::time_point StartTime = system_clock::now();
